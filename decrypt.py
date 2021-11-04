@@ -6,8 +6,8 @@ import re
 from reverse import reverse_back
 import portalocker
 
-def decrypt(dire, E, N):
-    print("E: %d, N: %d" % (E, N))
+def decrypt(dire, D, N):
+    print("D: %d, N: %d" % (D, N))
     try:
         if(os.path.isdir(dire)):
             if(dire[-1]=='/'):
@@ -16,10 +16,10 @@ def decrypt(dire, E, N):
                 dire+='/'
             files=os.listdir(dire)
             for f in files:
-                decrypt(dire+f, E, N)
+                decrypt(dire+f, D, N)
         elif(os.path.isfile(dire)):
             if(re.search('^.*?\.reverse\.cipher$',dire)):
-                decrypt_single_file(dire, E, N)
+                decrypt_single_file(dire, D, N)
             else:
                 print(dire+" Invalid file type")
         else:
@@ -29,13 +29,13 @@ def decrypt(dire, E, N):
         return -1
 
         
-def decrypt_single_file(filename, E, N):
+def decrypt_single_file(filename, D, N):
     try:
         flag=0
         print("Processing now: \""+filename+"\"")
         startTimeStamp=time.clock()
         r=open(filename,'rb') #r stands for the file that is gonna be cyphered
-        portalocker.lock(r, portalocker.LOCK_EX) #lock the file 
+        portalocker.lock(r, portalocker.LOCK_EX) #lock the file
         size=os.path.getsize(filename)
     
         index=filename.rfind('.')
@@ -82,7 +82,7 @@ def decrypt_single_file(filename, E, N):
                 ori2=int(a[i+1])
                 ori=ori1*256+ori2
                 if(ori<N):
-                    ori=pow(ori, E, N)
+                    ori=pow(ori, D, N)
                 ori1=ori/256
                 ori2=ori%256
                 a[i]=int(ori1)
@@ -126,7 +126,7 @@ def decrypt_single_file(filename, E, N):
 if __name__=='__main__':
     import argparse
     parser = argparse.ArgumentParser(description='Parameters')
-    parser.add_argument('-e', type=int, dest='E', help='E', default=1157)
+    parser.add_argument('-d', type=int, dest='D', help='D', default=1157)
     parser.add_argument('-n', type=int, dest='N', help='N', default=61823)
     parser.add_argument('dir', nargs='?', default='')
     args = parser.parse_args()
@@ -134,5 +134,5 @@ if __name__=='__main__':
         print("must provide dir/file name")
         parser.print_help()
         exit(1)
-    decrypt(sys.argv[1].strip(), args.E, args.N)
+    decrypt(sys.argv[1].strip(), args.D, args.N)
 

@@ -7,8 +7,8 @@ import re
 import sys
 from reverse import reverse
 
-def encrypt(dir, R, N):
-    print("R: %d, N: %d" % (R, N))
+def encrypt(dir, E, N):
+    print("E: %d, N: %d" % (E, N))
     try:
         if(os.path.isdir(dir)):
             files=os.listdir(dir)
@@ -17,21 +17,21 @@ def encrypt(dir, R, N):
                     pass
                 else:
                     dir+='/'
-                encrypt(dir+f, R, N)
+                encrypt(dir+f, E, N)
         elif(os.path.isfile(dir)):
             if os.path.splitext(dir)[1]==".py" or os.path.splitext(dir)[1]==".pyc" or os.path.splitext(dir)[1]==".tmp" or os.path.splitext(dir)[1]==".cipher":
                 return
             elif os.path.splitext(dir)[1]==".reverse":
-                encrypt_reverse_file(dir, R, N)
+                encrypt_reverse_file(dir, E, N)
             else:
-                encrypt_single_file(dir, R, N)
+                encrypt_single_file(dir, E, N)
         else:
             print("directory or file '%s' does not exist" % dir)
     except:
            print(traceback.format_exc())
            exit()
 
-def encrypt_single_file(path, R, N):
+def encrypt_single_file(path, E, N):
     print("Processing now: \""+path+"\"")
     reverse(path)
     path=path+'.reverse'
@@ -59,7 +59,7 @@ def encrypt_single_file(path, R, N):
             ori2=int(a[i+1])
             ori=ori1*256+ori2
             if(ori<N):
-                ori=pow(ori, R, N)
+                ori=pow(ori, E, N)
             
             ori1=ori/256
             ori2=ori%256
@@ -85,7 +85,7 @@ def encrypt_single_file(path, R, N):
     endTimeStamp=time.clock()
     print("The file \""+path+"\" has been encrypted successfully! Process totally %6.2f kb's document, cost %f seconds.\n"%((float(size)/1000),endTimeStamp-startTimeStamp))
 
-def encrypt_reverse_file(path, R, N):
+def encrypt_reverse_file(path, E, N):
     if os.path.isfile(path+".cipher.tmp"):
         os.remove(path+".cipher")
         os.rename(path+".cipher.tmp", path+".cipher")
@@ -126,7 +126,7 @@ def encrypt_reverse_file(path, R, N):
             ori2=int(a[i+1])
             ori=ori1*256+ori2
             if(ori<N):
-                ori=pow(ori, R, N)
+                ori=pow(ori, E, N)
             
             ori1=ori/256
             ori2=ori%256
@@ -157,7 +157,7 @@ def encrypt_reverse_file(path, R, N):
 if __name__=="__main__":
     import argparse
     parser = argparse.ArgumentParser(description='Parameters')
-    parser.add_argument('-r', type=int, dest='R', help='R', default=53)
+    parser.add_argument('-e', type=int, dest='E', help='E', default=53)
     parser.add_argument('-n', type=int, dest='N', help='N', default=61823)
     parser.add_argument('dir', nargs='?', default='')
     args = parser.parse_args()
@@ -165,5 +165,8 @@ if __name__=="__main__":
         print("must provide dir/file name")
         parser.print_help()
         exit(1)
-    encrypt(sys.argv[1], args.R, args.N)
+    if args.N > 65536:
+        print("N must be not greater than 65536")
+        exit(1)
+    encrypt(sys.argv[1], args.E, args.N)
   
