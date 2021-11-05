@@ -23,7 +23,7 @@ def decrypt(dire, D, N):
             else:
                 print(dire+" Invalid file type")
         else:
-            print("file doesn't exist")
+            print("ignore file '%s', which is neither directory not file" % dire)
     except:
         print(traceback.format_exc())
         return -1
@@ -35,89 +35,110 @@ def decrypt_single_file(filename, D, N):
         flag=0
         print("Processing now: \""+filename+"\"")
         startTimeStamp=time.clock()
-        r=open(filename,'rb') #r stands for the file that is gonna be cyphered
+        src_rd=open(filename,'rb') #r stands for the file that is gonna be cyphered
         verify_chksum=False
-        chksum_indication=r.read(16)
+        chksum_indication=src_rd.read(16)
         if chksum_indication == b'cchheecckkssuumm':
             verify_chksum=True
-            chksum=r.read(32)
+            chksum=src_rd.read(32)
             if len(chksum) < 32:
                 print("checksum not correct")
-                return
+                return -1
             chksum=chksum.decode('utf8')
-        portalocker.lock(r, portalocker.LOCK_EX) #lock the file
+        portalocker.lock(src_rd, portalocker.LOCK_EX) #lock the file
         size=os.path.getsize(filename)
     
         index=filename.rfind('.')
-        cypherfilename=filename[:index]  #get the name of the partly decrypted file
+        decrypted_fname=filename[:index]  #get the name of the partly decrypted file
     
-    
-        byte_read=8*1024
-        filetemp=''
-        if(os.path.isfile(cypherfilename)):
-            byte_processed=os.path.getsize(cypherfilename)  #get the size of file which has already been processed
-            r0=open(cypherfilename,'rb')  #r0 stands for the read stream for partly decrpyted cypherfile
-            index=cypherfilename.rfind('/')
-            cypherfilenamefolderpath=cypherfilename[:index+1]
-            cypherfilenamefilename=cypherfilename[index+1:]
-            filetemp=cypherfilenamefolderpath+cypherfilenamefilename+'.temp'  #temp file for copy and decrpyt
-            f=open(filetemp,'wb')  #write stream for temp file
-            n=byte_processed/byte_read
-            i=0
+
+        r0_byte_read=1024*1024 # 1MB
+        src_byte_read=r0_byte_read 
+        if N > 65536:
+            src_byte_read=int(r0_byte_read*3/2)
+        if(os.path.isfile(decrypted_fname)):
+            decrypted_tmp_fname=''
+            byte_processed=os.path.getsize(decrypted_fname)  #get the size of file which has already been processed
+            decrypted_tmp_fname=decrypted_fname+'.tmp'  #temp file for copy and decrpyt
+            decrypt_writer=open(decrypted_tmp_fname,'wb')  #write stream for temp file
+
+            n=byte_processed/r0_byte_read
+            r0=open(decrypted_fname,'rb')  #r0 stands for the read stream for partly decrpyted cypherfile
             while (1):
-                if i>=n-2:
-                      break
-                line=r0.read(byte_read)
-                if not line:
+                line=r0.read(r0_byte_read)
+                if not line or len(line) < r0_byte_read:
                     break
-                r.read(byte_read)
-                f.write(line)
-                i+=1
+                src_rd.read(src_byte_read)
+                decrypt_writer.write(line)
+            r0.close()
             flag=1
-    
         else:
-            f=open(cypherfilename,'wb')
+            decrypt_writer=open(decrypted_fname,'wb')
             flag=0
 
         while True:
             SpeedTimeS=time.clock()
-            line=r.read(byte_read)
+            line=src_rd.read(src_byte_read)
             if not line:
                 break
-            a=list(line)
-            i=0
-            while True:
-                if i>=len(a)-1:
-                    break
-                ori1=int(a[i])
-                ori2=int(a[i+1])
-                ori=ori1*256+ori2
-                if(ori<N):
-                    ori=pow(ori, D, N)
-                ori1=ori/256
-                ori2=ori%256
-                a[i]=int(ori1)
-                a[i+1]=int(ori2)
-                i+=2
-            f.write(bytes(a))
-            pos=r.tell()
+
+            b=list(line)
+            if N > 65536:
+                b_remain=len(b)%3
+                assert(b_remain==0 or b_remain==1)
+                a=[0]*(int(len(b)/3)*2+b_remain)
+                a[-1]=b[-1]
+                i=0
+                j=0
+                while True:
+                    if j+2>=len(b):
+                        break
+                    first=int(b[j])
+                    second=int(b[j+1])
+                    third=int(b[j+2])
+                    encoded=first*65536+second*256+third
+                    ori=pow(encoded, D, N)
+                    a[i]=int(ori>>8)
+                    a[i+1]=int(ori&255)
+                    i+=2
+                    j+=3
+            else:
+                a=b
+                i=0
+                while True:
+                    if i+1>=len(a):
+                        break
+                    ori1=int(a[i])
+                    ori2=int(a[i+1])
+                    ori=ori1*256+ori2
+                    if(ori<N):
+                        ori=pow(ori, D, N)
+                    ori1=ori>>8
+                    ori2=ori&255
+                    a[i]=int(ori1)
+                    a[i+1]=int(ori2)
+                    i+=2
+
+            decrypt_writer.write(bytes(a))
+            pos=src_rd.tell()
             SpeedTimeE=time.clock()
             SpeedTime=SpeedTimeE-SpeedTimeS
-            time_remained=SpeedTime*(size-pos)/byte_read
+            time_remained=SpeedTime*(size-pos)/src_byte_read
             h=int(time_remained/3600)
             m=int(((int(time_remained))%3600)/60)
             s=(int(time_remained))%60
             print("has processed "+str(float(pos)/1000)+'kb, ' + "time remains %dh %dmin %ds" % (h,m,s))
-            
-        f.close()
+
+        # Finished decryption            
+        decrypt_writer.close()
+        portalocker.unlock(src_rd)
+        assert(src_rd.tell() == size)
+        src_rd.close()
+
         if(flag):
-            r0.close()
-            os.remove(cypherfilename)
-            os.rename(filetemp,cypherfilename)
-        portalocker.unlock(r)
-        size=float(r.tell())
-        r.close()
-        reversed_filename=reverse_back(cypherfilename)
+            os.remove(decrypted_fname)
+            os.rename(decrypted_tmp_fname, decrypted_fname)
+        reversed_filename=reverse_back(decrypted_fname)
         if verify_chksum:
             reversed_file_chksum=md5(reversed_filename)
             if reversed_file_chksum == chksum:
@@ -127,22 +148,24 @@ def decrypt_single_file(filename, D, N):
                 print("checksum mismatch")
                 print("md5(%s): %s" % (reversed_filename, reversed_file_chksum))
                 print("exp: %s" % chksum)
-                return
+                return -1
         else:
             os.remove(filename)
         endTimeStamp=time.clock()
         print("The file \""+filename+"\" has been decrypted successfully. Process totally %6.2f kb's document, cost %f seconds.\n"%(size/1000,endTimeStamp-startTimeStamp))
+        return 0
     except:
         print(traceback.format_exc())
+        decrypt_writer.close()
+        portalocker.unlock(src_rd)
+        src_rd.close()
+
         if(flag):
             print("force quit manually")
-            r0.close()
-            portalocker.unlock(r)
-            os.remove(cypherfilename)
-            time.sleep(3)
-            f.close()
-            os.rename(filetemp,cypherfilename)
-            return -1
+            os.remove(decrypted_fname)
+            time.sleep(1)
+            os.rename(decrypted_tmp_fname, decrypted_fname)
+        return -1
 
 def guess(filename,num):
     r=open(filename,'rb')
@@ -187,6 +210,12 @@ if __name__=='__main__':
     if args.dir == "":
         print("must provide dir/file name")
         parser.print_help()
+        exit(1)
+    if args.N > 256**3:
+        print("N must be not greater than 256*256*256")
+        exit(1)
+    if args.N < 32*256:
+        print("N must be not less than 32*256")
         exit(1)
     decrypt(sys.argv[1].strip(), args.D, args.N)
 
