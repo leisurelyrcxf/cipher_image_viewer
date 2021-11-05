@@ -4,6 +4,7 @@ import sys
 import traceback
 import re
 from reverse import reverse_back
+from hash_func import md5
 import portalocker
 
 def decrypt(dire, D, N):
@@ -35,6 +36,15 @@ def decrypt_single_file(filename, D, N):
         print("Processing now: \""+filename+"\"")
         startTimeStamp=time.clock()
         r=open(filename,'rb') #r stands for the file that is gonna be cyphered
+        verify_chksum=False
+        chksum_indication=r.read(16)
+        if chksum_indication == b'cchheecckkssuumm':
+            verify_chksum=True
+            chksum=r.read(32)
+            if len(chksum) < 32:
+                print("checksum not correct")
+                return
+            chksum=chksum.decode('utf8')
         portalocker.lock(r, portalocker.LOCK_EX) #lock the file
         size=os.path.getsize(filename)
     
@@ -42,7 +52,7 @@ def decrypt_single_file(filename, D, N):
         cypherfilename=filename[:index]  #get the name of the partly decrypted file
     
     
-        byte_read=10000
+        byte_read=8*1024
         filetemp=''
         if(os.path.isfile(cypherfilename)):
             byte_processed=os.path.getsize(cypherfilename)  #get the size of file which has already been processed
@@ -68,6 +78,7 @@ def decrypt_single_file(filename, D, N):
         else:
             f=open(cypherfilename,'wb')
             flag=0
+
         while True:
             SpeedTimeS=time.clock()
             line=r.read(byte_read)
@@ -106,8 +117,19 @@ def decrypt_single_file(filename, D, N):
         portalocker.unlock(r)
         size=float(r.tell())
         r.close()
-        os.remove(filename)
-        reverse_back(cypherfilename)
+        reversed_filename=reverse_back(cypherfilename)
+        if verify_chksum:
+            reversed_file_chksum=md5(reversed_filename)
+            if reversed_file_chksum == chksum:
+                print("checksum match, removing cipher file %s" % filename)
+                os.remove(filename)
+            else:
+                print("checksum mismatch")
+                print("md5(%s): %s" % (reversed_filename, reversed_file_chksum))
+                print("exp: %s" % chksum)
+                return
+        else:
+            os.remove(filename)
         endTimeStamp=time.clock()
         print("The file \""+filename+"\" has been decrypted successfully. Process totally %6.2f kb's document, cost %f seconds.\n"%(size/1000,endTimeStamp-startTimeStamp))
     except:
@@ -121,7 +143,39 @@ def decrypt_single_file(filename, D, N):
             f.close()
             os.rename(filetemp,cypherfilename)
             return -1
-    
+
+def guess(filename,num):
+    r=open(filename,'rb')
+    pos=filename.rfind('.')
+    filename=filename[:pos]
+    ext=""
+    fileNameWithouExt=filename
+    pos=filename.rfind('.')
+    if(pos!=-1):
+        fileNameWithouExt=filename[:pos]
+        ext=filename[pos+1:]
+    newfilename=fileNameWithouExt+'.orginal.'+ext
+  
+    f=open(newfilename,'wb')
+    line=r.read(1000)
+    a=list(line)
+    number=0
+    temp=0
+    for b in a:
+        temp=(ord(b)-num)%256 
+        for i in range(256):
+            if (255*i)%256==temp:
+                a[number]=chr(i)
+                number+=1
+    newline="".join(a)
+    f.write(newline)
+    f.close()
+    typ=magic.from_file(newfilename)
+    print(typ)
+    if typ=='Microsoft ASF' or typ=='ISO Media, Apple QuickTime movie' or typ=='ISO Media, MPEG v4 system, version 1' or typ=="ISO Media, MPEG v4 system, version 2":
+        return 1
+    else:
+        return 0
     
 if __name__=='__main__':
     import argparse
