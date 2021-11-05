@@ -101,6 +101,8 @@ def decrypt_single_file(filename, D, N, debug=False):
                     third=int(b[j+2])
                     encoded=first*65536+second*256+third
                     ori=pow(encoded, D, N)
+                    if ori > 65536:
+                        raise Exception("FATAL ERROR: ori(%d) > 65536, maybe you are using a wrong key?" % ori)
                     a[i]=int(ori>>8)
                     a[i+1]=int(ori&255)
                     i+=2
@@ -167,10 +169,10 @@ def decrypt_single_file(filename, D, N, debug=False):
         print(traceback.format_exc())
         decrypt_writer.close()
         portalocker.unlock(src_rd)
+        print("Unlocked src_fd")
         src_rd.close()
 
         if(flag):
-            print("force quit manually")
             os.remove(decrypted_fname)
             time.sleep(1)
             os.rename(decrypted_tmp_fname, decrypted_fname)
