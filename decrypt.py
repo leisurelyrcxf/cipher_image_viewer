@@ -3,8 +3,9 @@ import time
 import sys
 import traceback
 import re
-from reverse import reverse_back
+from reverse import reverse_back, reverse_func
 from hash_func import md5
+from io import BytesIO
 import portalocker
 
 def decrypt(dire, D, N, debug=False):
@@ -21,7 +22,8 @@ def decrypt(dire, D, N, debug=False):
 
         if (os.path.isfile(dire)):
             if(re.search('^.*?\.reverse\.cipher$',dire)):
-                return decrypt_single_file(dire, D, N, debug)
+                ret, _ = decrypt_single_file(dire, D, N, debug)
+                return ret
             print("ignore non-cipher file %s" % dire)
             return 0
 
@@ -32,7 +34,7 @@ def decrypt(dire, D, N, debug=False):
         return -1
 
         
-def decrypt_single_file(filename, D, N, debug=False):
+def decrypt_single_file(filename, D, N, debug=False, memory_mode=False):
     print("D: %d, N: %d" % (D, N))
     try:
         flag=0
@@ -46,7 +48,7 @@ def decrypt_single_file(filename, D, N, debug=False):
             chksum=src_rd.read(32)
             if len(chksum) < 32:
                 print("checksum not correct")
-                return -1
+                return -1, None
             chksum=chksum.decode('utf8')
         portalocker.lock(src_rd, portalocker.LOCK_EX) #lock the file
         size=os.path.getsize(filename)
@@ -59,7 +61,7 @@ def decrypt_single_file(filename, D, N, debug=False):
         src_byte_read=r0_byte_read 
         if N > 65536:
             src_byte_read=int(r0_byte_read*3/2)
-        if(os.path.isfile(decrypted_fname)):
+        if (not memory_mode) and os.path.isfile(decrypted_fname):
             decrypted_tmp_fname=''
             byte_processed=os.path.getsize(decrypted_fname)  #get the size of file which has already been processed
             decrypted_tmp_fname=decrypted_fname+'.tmp'  #temp file for copy and decrpyt
@@ -75,8 +77,11 @@ def decrypt_single_file(filename, D, N, debug=False):
                 decrypt_writer.write(line)
             r0.close()
             flag=1
-        else:
+        elif not memory_mode:
             decrypt_writer=open(decrypted_fname,'wb')
+            flag=0
+        else:
+            decrypt_writer = BytesIO()
             flag=0
 
         while True:
@@ -135,19 +140,28 @@ def decrypt_single_file(filename, D, N, debug=False):
             print("has processed "+str(float(pos)/1000)+'kb, ' + "time remains %dh %dmin %ds" % (h,m,s))
 
         # Finished decryption            
+        if memory_mode:
+            decrypt_bytes = decrypt_writer.getvalue()
         decrypt_writer.close()
         portalocker.unlock(src_rd)
         assert(src_rd.tell() == size)
         src_rd.close()
 
-        if(flag):
+        if flag:
             os.remove(decrypted_fname)
             os.rename(decrypted_tmp_fname, decrypted_fname)
+
+        if memory_mode:
+            decrypt_reader = BytesIO(decrypt_bytes)
+            reversed_bytes = reverse_func(len(decrypt_bytes), decrypt_reader, memory_output=True)
+            decrypt_reader.close()
+            return 0, reversed_bytes
+
         orig_fname=reverse_back(decrypted_fname)
         if verify_chksum:
             orig_chksum=md5(orig_fname)
             if orig_chksum == chksum:
-                print("checksum match, removing cipher file %s" % filename)
+                print("\nChecksum OK, removing cipher file %s" % filename)
                 os.remove(filename)
             else:
                 print("Checksum Mismatch:")
@@ -159,12 +173,12 @@ def decrypt_single_file(filename, D, N, debug=False):
                 else:
                     print("Renaming corrupted file '%s' to '%s'" % (orig_fname, orig_fname+".dbg"))
                     os.rename(orig_fname, orig_fname+".dbg")
-                return -1
+                return -1, None
         else:
             os.remove(filename)
         endTimeStamp=time.clock()
         print("The file \""+filename+"\" has been decrypted successfully. Process totally %6.2f kb's document, cost %f seconds.\n"%(size/1000,endTimeStamp-startTimeStamp))
-        return 0
+        return 0, None
     except:
         print(traceback.format_exc())
         decrypt_writer.close()
@@ -176,7 +190,7 @@ def decrypt_single_file(filename, D, N, debug=False):
             os.remove(decrypted_fname)
             time.sleep(1)
             os.rename(decrypted_tmp_fname, decrypted_fname)
-        return -1
+        return -1, None
 
 def guess(filename,num):
     r=open(filename,'rb')
@@ -229,5 +243,5 @@ if __name__=='__main__':
     if args.N < 32*256:
         print("N must be not less than 32*256")
         exit(1)
-    decrypt(sys.argv[1].strip(), args.D, args.N, args.debug)
+    decrypt(args.dir, args.D, args.N, args.debug)
 

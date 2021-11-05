@@ -133,5 +133,5 @@ if __name__=="__main__":
     if args.N < 32*256:
         print("N must be not less than 32*256")
         exit(1)
-    encrypt(sys.argv[1], args.E, args.N)
+    encrypt(args.dir.strip(), args.E, args.N)
   
