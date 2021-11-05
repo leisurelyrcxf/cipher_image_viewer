@@ -9,6 +9,13 @@ from hash_func import md5
 from reverse import reverse, reverse_back
 
 def encrypt(dir, E, N):
+    if os.path.isdir(dir):
+        x=input("Do you really want to encrypt all the subdirectories of '%s', press y to continue...\n" % dir)
+        if x != 'y' and x != 'Y':
+            exit(1)
+    encrypt_(dir, E, N)
+
+def encrypt_(dir, E, N):
     try:
         if(os.path.isdir(dir)):
             files=os.listdir(dir)
@@ -17,7 +24,7 @@ def encrypt(dir, E, N):
                     pass
                 else:
                     dir+='/'
-                encrypt(dir+f, E, N)
+                encrypt_(dir+f, E, N)
         elif(os.path.isfile(dir)):
             if os.path.splitext(dir)[1]==".py" or os.path.splitext(dir)[1]==".pyc" or os.path.splitext(dir)[1]==".tmp" or os.path.splitext(dir)[1]==".cipher" or os.path.splitext(dir)[1]==".chksum":
                 return
@@ -40,9 +47,15 @@ def encrypt_single_file(path, E, N):
     chksum=md5(path)
     path = reverse(path)
     r=open(path,'rb')
-    f=open(path+'.cipher','wb')
-    f.write(bytes("cchheecckkssuumm", encoding='utf8'))
-    f.write(bytes(chksum, encoding='utf8'))
+    encrypted_fname=path+'.cipher'
+    if os.path.isfile(encrypted_fname):
+        x=input("overwritting existed file '%s', press y to continue...\n" % encrypted_fname)
+        if x != 'y' and x != 'Y':
+            exit(1)
+
+    enwr=open(encrypted_fname,'wb')
+    enwr.write(bytes("cchheecckkssuumm", encoding='utf8'))
+    enwr.write(bytes(chksum, encoding='utf8'))
     size=os.path.getsize(path)
     
     startTimeStamp=time.clock()
@@ -84,7 +97,7 @@ def encrypt_single_file(path, E, N):
                 b[j+2]=remain&255
                 j+=3
             i+=2
-        f.write(bytes(b))
+        enwr.write(bytes(b))
         pos=r.tell()
         SpeedTimeE=time.clock()
         SpeedTime=SpeedTimeE-SpeedTimeS
@@ -96,7 +109,7 @@ def encrypt_single_file(path, E, N):
         print("has processed "+str(float(pos)/1000)+'kb, ' + "time remains %dh %dmin %ds" % (h,m,s))
         print("has processed "+str(float(r.tell())/1000)+'kb.\n')
 
-    f.close()
+    enwr.close()
     size=float(r.tell())
     r.close()
     os.remove(path)

@@ -7,29 +7,32 @@ from reverse import reverse_back
 from hash_func import md5
 import portalocker
 
-def decrypt(dire, D, N):
+def decrypt(dire, D, N, debug=False):
     try:
         if(os.path.isdir(dire)):
-            if(dire[-1]=='/'):
-                pass
-            else:
+            if(dire[-1]!='/'):
                 dire+='/'
             files=os.listdir(dire)
             for f in files:
-                decrypt(dire+f, D, N)
-        elif(os.path.isfile(dire)):
+                ret = decrypt(dire+f, D, N, debug)
+                if ret != 0:
+                    return ret
+            return 0
+
+        if (os.path.isfile(dire)):
             if(re.search('^.*?\.reverse\.cipher$',dire)):
-                decrypt_single_file(dire, D, N)
-            else:
-                print(dire+" Invalid file type")
-        else:
-            print("ignore file '%s', which is neither directory not file" % dire)
+                return decrypt_single_file(dire, D, N, debug)
+            print("ignore non-cipher file %s" % dire)
+            return 0
+
+        print("ignore file '%s', which is neither directory not file" % dire)
+        return 0
     except:
         print(traceback.format_exc())
         return -1
 
         
-def decrypt_single_file(filename, D, N):
+def decrypt_single_file(filename, D, N, debug=False):
     print("D: %d, N: %d" % (D, N))
     try:
         flag=0
@@ -138,16 +141,22 @@ def decrypt_single_file(filename, D, N):
         if(flag):
             os.remove(decrypted_fname)
             os.rename(decrypted_tmp_fname, decrypted_fname)
-        reversed_filename=reverse_back(decrypted_fname)
+        orig_fname=reverse_back(decrypted_fname)
         if verify_chksum:
-            reversed_file_chksum=md5(reversed_filename)
-            if reversed_file_chksum == chksum:
+            orig_chksum=md5(orig_fname)
+            if orig_chksum == chksum:
                 print("checksum match, removing cipher file %s" % filename)
                 os.remove(filename)
             else:
-                print("checksum mismatch")
-                print("md5(%s): %s" % (reversed_filename, reversed_file_chksum))
-                print("exp: %s" % chksum)
+                print("Checksum Mismatch:")
+                print("MD5(%s): %s" % (orig_fname, orig_chksum))
+                print("Expect: %s" % chksum)
+                if not debug:
+                    print("Deleting corrupted file '%s'" % (orig_fname))
+                    os.remove(orig_fname)
+                else:
+                    print("Renaming corrupted file '%s' to '%s'" % (orig_fname, orig_fname+".dbg"))
+                    os.rename(orig_fname, orig_fname+".dbg")
                 return -1
         else:
             os.remove(filename)
@@ -206,6 +215,7 @@ if __name__=='__main__':
     parser.add_argument('-d', type=int, dest='D', help='D', default=1157)
     parser.add_argument('-n', type=int, dest='N', help='N', default=61823)
     parser.add_argument('dir', nargs='?', default='')
+    parser.add_argument('--debug', type=bool, dest='debug', help='debug mode, will keep error files', default=False)
     args = parser.parse_args()
     if args.dir == "":
         print("must provide dir/file name")
@@ -217,5 +227,5 @@ if __name__=='__main__':
     if args.N < 32*256:
         print("N must be not less than 32*256")
         exit(1)
-    decrypt(sys.argv[1].strip(), args.D, args.N)
+    decrypt(sys.argv[1].strip(), args.D, args.N, args.debug)
 
