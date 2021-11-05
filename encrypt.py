@@ -9,7 +9,6 @@ from hash_func import md5
 from reverse import reverse, reverse_back
 
 def encrypt(dir, E, N, generate_chksum=True):
-    print("E: %d, N: %d" % (E, N))
     try:
         if(os.path.isdir(dir)):
             files=os.listdir(dir)
@@ -34,6 +33,7 @@ def encrypt(dir, E, N, generate_chksum=True):
            exit()
 
 def encrypt_single_file(path, E, N, generate_chksum=True):
+    print("E: %d, N: %d" % (E, N))
     byte_read=8*1024
 
     print("Processing now: \""+path+"\"")

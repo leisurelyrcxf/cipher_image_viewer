@@ -8,7 +8,6 @@ from hash_func import md5
 import portalocker
 
 def decrypt(dire, D, N):
-    print("D: %d, N: %d" % (D, N))
     try:
         if(os.path.isdir(dire)):
             if(dire[-1]=='/'):
@@ -31,6 +30,7 @@ def decrypt(dire, D, N):
 
         
 def decrypt_single_file(filename, D, N):
+    print("D: %d, N: %d" % (D, N))
     try:
         flag=0
         print("Processing now: \""+filename+"\"")
