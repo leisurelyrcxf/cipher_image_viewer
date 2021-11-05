@@ -18,7 +18,7 @@ def reverse_back(path_reverse):
     return path
 
 def _reverse(src, dst):
-    block_size=128*1024*1024 #128Mb
+    block_size=100*1024*1024 #100Mb
 
     r=open(src, 'rb')
     size=os.path.getsize(src)
