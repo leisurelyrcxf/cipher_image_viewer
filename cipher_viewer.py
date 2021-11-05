@@ -115,6 +115,16 @@ class App(Frame):
     def __init__(self, dir, D, N, master=None):
         Frame.__init__(self, master)
         self.master.title('Image Viewer')
+        try:
+            try:
+                self.master.tk.call('tk_getOpenFile', '-foobarbaz')
+            except TclError:
+                pass
+
+            self.master.tk.call('set', '::tk::dialog::file::showHiddenBtn', '1')
+            self.master.tk.call('set', '::tk::dialog::file::showHiddenVar', '0')
+        except:
+            pass
 
         initial_dir = dir
         if initial_dir == "":
