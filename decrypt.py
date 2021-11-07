@@ -238,7 +238,7 @@ if __name__=='__main__':
     parser.add_argument('-d', type=int, dest='D', help='D', default=1157)
     parser.add_argument('-n', type=int, dest='N', help='N', default=61823)
     parser.add_argument('dir', nargs='?', default='')
-    parser.add_argument('--debug', type=bool, dest='debug', help='debug mode, will keep error files', default=False)
+    parser.add_argument('--debug', action='store_true', dest='debug', help='debug mode, will keep error files')
     args = parser.parse_args()
     if args.dir == "":
         print("must provide dir/file name")

@@ -122,7 +122,7 @@ if __name__=="__main__":
     parser = argparse.ArgumentParser(description='Parameters')
     parser.add_argument('-e', type=int, dest='E', help='E', default=53)
     parser.add_argument('-n', type=int, dest='N', help='N', default=61823)
-    parser.add_argument('--rerverse', type=bool, dest='reverse', help='reverse blocks', default=False)
+    parser.add_argument('--reverse', action='store_true', dest='reverse', help='reverse blocks')
     parser.add_argument('dir', nargs='?', default='')
     args = parser.parse_args()
     if args.dir == "":

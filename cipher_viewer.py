@@ -4,6 +4,8 @@ import PIL.Image
 from PIL import ImageFile
 ImageFile.LOAD_TRUNCATED_IMAGES = True
 import os
+from send2trash import send2trash
+from pathlib import Path
 
 try:
     from Tkinter import *
@@ -14,9 +16,29 @@ except ImportError:
 from decrypt import decrypt_single_file
 import PIL.ImageTk
 from io import BytesIO
+import webview
+
+def webview_file_dialog():
+    file = None
+    def open_file_dialog(w):
+        nonlocal file
+        try:
+            file = w.create_file_dialog(webview.OPEN_DIALOG)[0]
+        except TypeError:
+            pass  # user exited file dialog without picking
+        finally:
+            w.destroy()
+    window = webview.create_window("", hidden=True)
+    webview.start(open_file_dialog, window)
+    # file will either be a string or None
+    return file
 
 class App(Frame):
     def invalidate(self):
+        if self.im is None:
+            self.canvas.delete("all")
+            return
+
         im = self.im
         w, h = self.master.winfo_screenwidth(), self.master.winfo_screenheight()
         imgWidth, imgHeight = im.size
@@ -26,7 +48,7 @@ class App(Frame):
             imgHeight = int(imgHeight*ratio)
             im = im.resize((imgWidth,imgHeight))
         else:
-            ratio = min(w/imgWidth, h/imgHeight)
+            ratio = min(w/imgWidth, h/imgHeight, 1.35)
             imgWidth = int(imgWidth*ratio)
             imgHeight = int(imgHeight*ratio)
             im = im.resize((imgWidth,imgHeight))
@@ -40,14 +62,29 @@ class App(Frame):
 
     def open(self, event=None):
         _ = event
-        filename = filedialog.askopenfilename(initialdir=self.dirname)
+        filename = webview_file_dialog()
+        #filename = filedialog.askopenfilename(initialdir=self.dirname, filetypes=[("image files", ".png .webp .jpg .jpeg .bmp .png"), ("cipher files", ".cipher")])
         self.open_(filename)
 
-    def open_(self, filename):
+    def open_(self, filename=None):
+        if filename == None:
+            filename = self.cur
+
+        if type(filename) is int:
+            if len(self.dir_images) == 0 or self.dirname == "":
+                self.im = None
+                self.invalidate()
+                return
+
+            filename = os.path.join(self.dirname, self.dir_images[filename%len(self.dir_images)])
+
         if type(filename) is not str:
             if filename != ():
                 print("File name not string!")
                 print(filename)
+            return
+
+        if filename == "":
             return
 
         if not self.image_pred(filename):
@@ -58,7 +95,7 @@ class App(Frame):
         basename = os.path.basename(filename)
 
         if dirname != self.dirname:
-            self.collect_images(dirname)
+            self.chdir(dirname)
 
         self.cur = self.dir_images.index(basename)
 
@@ -77,40 +114,70 @@ class App(Frame):
         self.num_page=0
         self.num_page_tv.set(str(self.num_page+1))
 
-    def collect_images(self, dirname):
-        self.dirname = dirname
-        self.dir_images = []
-        dirfiles = os.listdir(dirname)
-        for f in dirfiles:
-            if self.image_pred(f):
-                self.dir_images.append(f)
-        self.dir_images.sort()
-        print("Images in dir '%s'" % self.dirname)
-        print(self.dir_images)
-
     def image_pred(self, fname):
         fname = fname.lower()
-        return fname.endswith(".jpg") or fname.endswith(".jpeg") or fname.endswith(".bmp") or fname.endswith('png') or fname.endswith(".cipher")
+        if fname.endswith(".cipher"):
+            return True
+
+        return fname.endswith(".jpg") or fname.endswith(".jpeg") or fname.endswith(".bmp") or fname.endswith('png') or fname.endswith(".webp")
 
     def prev(self, key_event=None):
         if self.dirname == "" or len(self.dir_images) == 0 or (len(self.dir_images) == 1 and self.cur == 0):
             return
-
-        if self.cur == -1:
-            self.cur = 0
-        self.open_(os.path.join(self.dirname, self.dir_images[self.cur-1]))
+        self.open_(max(-1, self.cur-1))
 
     def next(self, key_event=None):
         if self.dirname == "" or len(self.dir_images) == 0 or (len(self.dir_images) == 1 and self.cur == 0):
             return
+        self.open_(self.cur+1)
 
-        self.open_(os.path.join(self.dirname, self.dir_images[(self.cur+1)%len(self.dir_images)]))
+    def delete(self, key_event=None):
+        if self.cur < 0 or self.cur >= len(self.dir_images):
+            return
+
+        filename = self.dir_images[self.cur]
+        del self.dir_images[self.cur]
+        send2trash(os.path.join(self.dirname, filename))
+        
+        self.open_()
+
+    def switch_to_parent(self, key_event=None):
+        if self.dirname == "":
+            return
+
+        p=str(Path(self.dirname).parent)
+        if p == self.dirname:
+            return
+        self.chdir(p, True)
+
+    def chdir(self, dirname, open_first=False):
+        self.dirname = os.path.abspath(dirname)
+
+        self.dir_images = []
+        for f in os.listdir(dirname):
+            if self.image_pred(f):
+                self.dir_images.append(f)
+        self.dir_images.sort()
+        if len(self.dir_images) > 0:
+            self.cur = 0
+        else:
+            self.cur = -1
+
+        print("Images in dir '%s'" % self.dirname)
+        print(self.dir_images)
+
+        if open_first:
+            self.open_() 
 
     def key_handler(self, event):
-        if event.char == 'j':
+        if event.char == 'h':
             self.prev(event)
-        elif event.char == 'k':
+        elif event.char == 'l':
             self.next(event)
+        elif event.char == 'd':
+            self.delete(event)
+        elif event.char == 'u':
+            self.switch_to_parent(event)
 
     def __init__(self, dir, D, N, master=None):
         Frame.__init__(self, master)
@@ -132,10 +199,9 @@ class App(Frame):
             initial_dir = Path.home()
             pic_dir = os.path.join(initial_dir, "Pictures")
             if os.path.isdir(pic_dir): initial_dir = pic_dir
-        self.collect_images(initial_dir)
-        self.cur = -1
 
-        self.num_page=0
+        self.im = None
+        self.num_page = 0
         self.num_page_tv = StringVar()
         self.D = D
         self.N = N
@@ -155,6 +221,7 @@ class App(Frame):
         fram.focus_set()
 
         self.pack()
+        self.chdir(initial_dir, True)
 
 if __name__ == "__main__":
     import argparse
