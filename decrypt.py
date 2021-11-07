@@ -21,7 +21,7 @@ def decrypt(dire, D, N, debug=False):
             return 0
 
         if (os.path.isfile(dire)):
-            if(re.search('^.*?\.reverse\.cipher$',dire)):
+            if(re.search('^.*?\.cipher$',dire)):
                 ret, _ = decrypt_single_file(dire, D, N, debug)
                 return ret
             print("ignore non-cipher file %s" % dire)
@@ -152,12 +152,19 @@ def decrypt_single_file(filename, D, N, debug=False, memory_mode=False):
             os.rename(decrypted_tmp_fname, decrypted_fname)
 
         if memory_mode:
+            if not decrypted_fname.endswith(".reverse"):
+                return decrypt_bytes
+
             decrypt_reader = BytesIO(decrypt_bytes)
             reversed_bytes = reverse_func(len(decrypt_bytes), decrypt_reader, memory_output=True)
             decrypt_reader.close()
             return 0, reversed_bytes
 
-        orig_fname=reverse_back(decrypted_fname)
+        if decrypted_fname.endswith(".reverse"):
+            orig_fname=reverse_back(decrypted_fname)
+        else:
+            orig_fname=decrypted_fname
+
         if verify_chksum:
             orig_chksum=md5(orig_fname)
             if orig_chksum == chksum:

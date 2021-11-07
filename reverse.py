@@ -3,7 +3,7 @@ import os
 import sys
 from io import BytesIO
 
-block_size = 1024 #100Mb
+block_size = 100*1024*1024 #100Mb
 
 def reverse(path):
     path_reverse=path+'.reverse'

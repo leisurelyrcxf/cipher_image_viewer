@@ -8,14 +8,14 @@ import sys
 from hash_func import md5
 from reverse import reverse, reverse_back
 
-def encrypt(dir, E, N):
+def encrypt(dir, E, N, do_reverse=False):
     if os.path.isdir(dir):
         x=input("Do you really want to encrypt all the subdirectories of '%s', press y to continue...\n" % dir)
         if x != 'y' and x != 'Y':
             exit(1)
-    encrypt_(dir, E, N)
+    encrypt_(dir, E, N, do_reverse)
 
-def encrypt_(dir, E, N):
+def encrypt_(dir, E, N, do_reverse=False):
     try:
         if(os.path.isdir(dir)):
             files=os.listdir(dir)
@@ -24,28 +24,29 @@ def encrypt_(dir, E, N):
                     pass
                 else:
                     dir+='/'
-                encrypt_(dir+f, E, N)
+                encrypt_(dir+f, E, N, do_reverse)
         elif(os.path.isfile(dir)):
             if os.path.splitext(dir)[1]==".py" or os.path.splitext(dir)[1]==".pyc" or os.path.splitext(dir)[1]==".tmp" or os.path.splitext(dir)[1]==".cipher" or os.path.splitext(dir)[1]==".chksum":
                 return
             elif os.path.splitext(dir)[1]==".reverse":
                 dir=reverse_back(dir)
-                encrypt_single_file(dir, E, N)
+                encrypt_single_file(dir, E, N, do_reverse)
             else:
-                encrypt_single_file(dir, E, N)
+                encrypt_single_file(dir, E, N, do_reverse)
         else:
             print("directory or file '%s' does not exist" % dir)
     except:
            print(traceback.format_exc())
            exit()
 
-def encrypt_single_file(path, E, N):
+def encrypt_single_file(path, E, N, do_reverse=False):
     print("E: %d, N: %d" % (E, N))
     byte_read=1*1024*1024 # 1MB
 
     print("Processing now: \""+path+"\"")
     chksum=md5(path)
-    path = reverse(path)
+    if do_reverse:
+        path = reverse(path)
     r=open(path,'rb')
     encrypted_fname=path+'.cipher'
     if os.path.isfile(encrypted_fname):
@@ -121,6 +122,7 @@ if __name__=="__main__":
     parser = argparse.ArgumentParser(description='Parameters')
     parser.add_argument('-e', type=int, dest='E', help='E', default=53)
     parser.add_argument('-n', type=int, dest='N', help='N', default=61823)
+    parser.add_argument('--rerverse', type=bool, dest='reverse', help='reverse blocks', default=False)
     parser.add_argument('dir', nargs='?', default='')
     args = parser.parse_args()
     if args.dir == "":
@@ -133,5 +135,5 @@ if __name__=="__main__":
     if args.N < 32*256:
         print("N must be not less than 32*256")
         exit(1)
-    encrypt(args.dir.strip(), args.E, args.N)
+    encrypt(args.dir.strip(), args.E, args.N, args.reverse)
   
