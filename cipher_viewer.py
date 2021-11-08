@@ -66,7 +66,7 @@ class App(Frame):
         #filename = filedialog.askopenfilename(initialdir=self.dirname, filetypes=[("image files", ".png .webp .jpg .jpeg .bmp .png"), ("cipher files", ".cipher")])
         self.open_(filename)
 
-    def open_(self, filename=None):
+    def open_(self, filename=None, on_file_not_exists=None):
         if filename == None:
             filename = self.cur
 
@@ -99,20 +99,27 @@ class App(Frame):
 
         self.cur = self.dir_images.index(basename)
 
-        if filename.endswith(".cipher"):
-            ret, jpgdata=decrypt_single_file(filename, self.D, self.N, memory_mode=True)
-            if ret != 0:
-                print("decrypt file '%s' failed with ret value %d" % (filename, ret))
-                return
+        try:
+            if filename.endswith(".cipher"):
+                ret, jpgdata=decrypt_single_file(filename, self.D, self.N, memory_mode=True)
+                if ret != 0:
+                    print("decrypt file '%s' failed with ret value %d" % (filename, ret))
+                    return
 
-            file_jpgdata = BytesIO(jpgdata)
-            self.im = PIL.Image.open(file_jpgdata)
-        else:
-            self.im = PIL.Image.open(filename)
+                file_jpgdata = BytesIO(jpgdata)
+                self.im = PIL.Image.open(file_jpgdata)
+            else:
+                self.im = PIL.Image.open(filename)
+        except FileNotFoundError or OSError:
+            self.delete(keep_file=True)
+            if on_file_not_exists is not None:
+                on_file_not_exists()
+            return
 
         self.invalidate()
         self.num_page=0
         self.num_page_tv.set(str(self.num_page+1))
+        return
 
     def image_pred(self, fname):
         fname = fname.lower()
@@ -124,20 +131,22 @@ class App(Frame):
     def prev(self, key_event=None):
         if self.dirname == "" or len(self.dir_images) == 0 or (len(self.dir_images) == 1 and self.cur == 0):
             return
-        self.open_(max(-1, self.cur-1))
+
+        self.open_(max(-1, self.cur-1), on_file_not_exists=lambda: self.prev())
 
     def next(self, key_event=None):
         if self.dirname == "" or len(self.dir_images) == 0 or (len(self.dir_images) == 1 and self.cur == 0):
             return
         self.open_(self.cur+1)
 
-    def delete(self, key_event=None):
+    def delete(self, key_event=None, keep_file=False):
         if self.cur < 0 or self.cur >= len(self.dir_images):
             return
 
         filename = self.dir_images[self.cur]
         del self.dir_images[self.cur]
-        send2trash(os.path.join(self.dirname, filename))
+        if not keep_file:
+            send2trash(os.path.join(self.dirname, filename))
         
         self.open_()
 
