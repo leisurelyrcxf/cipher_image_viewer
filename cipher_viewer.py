@@ -73,7 +73,10 @@ class App(Frame):
             # self.canvas.delete("all")
             photo_index = (photo_index + 1) % len(photoes)
             self.canvas.create_image(w/2, h/2, image=photoes[photo_index])
-            self.canceller = self.canvas.after(delay, play)
+            x_delay = delay
+            if photo_index == len(photoes) - 1:
+                x_delay = 200
+            self.canceller = self.canvas.after(x_delay, play)
 
         self.canceller = self.canvas.after(delay, play)
 
