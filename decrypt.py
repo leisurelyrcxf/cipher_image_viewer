@@ -153,7 +153,7 @@ def decrypt_single_file(filename, D, N, debug=False, memory_mode=False):
 
         if memory_mode:
             if not decrypted_fname.endswith(".reverse"):
-                return decrypt_bytes
+                return 0, decrypt_bytes
 
             decrypt_reader = BytesIO(decrypt_bytes)
             reversed_bytes = reverse_func(len(decrypt_bytes), decrypt_reader, memory_output=True)
