@@ -168,13 +168,29 @@ class App(Frame):
         if self.dirname == "" or len(self.dir_images) == 0 or (len(self.dir_images) == 1 and self.cur == 0):
             return
         self.cancel()
-        self.open_(max(-1, self.cur-1), on_file_not_exists=lambda: self.prev())
+        self.open_(self.cur-1, on_file_not_exists=lambda: self.prev())
 
     def next(self, key_event=None):
         if self.dirname == "" or len(self.dir_images) == 0 or (len(self.dir_images) == 1 and self.cur == 0):
             return
         self.cancel()
         self.open_(self.cur+1)
+
+    def reload(self, key_event=None):
+        if self.dirname == "":
+            return
+
+        cur_fname = ''
+        if self.cur >= 0 and self.cur < len(self.dir_images):
+            cur_fname = self.dir_images[self.cur]
+
+        self.chdir(self.dirname)
+
+        try:
+            self.cur = self.dir_images.index(cur_fname)
+        except:
+            self.cur = 0
+        self.open_()
 
     def delete(self, key_event=None, keep_file=False):
         self.cancel()
@@ -208,10 +224,7 @@ class App(Frame):
             if self.image_pred(f):
                 self.dir_images.append(f)
         self.dir_images.sort()
-        if len(self.dir_images) > 0:
-            self.cur = 0
-        else:
-            self.cur = -1
+        self.cur = 0
 
         print("Images in dir '%s'" % self.dirname)
         print(self.dir_images)
@@ -228,6 +241,8 @@ class App(Frame):
             self.delete(event)
         elif event.char == 'u':
             self.switch_to_parent(event)
+        elif event.char == 'r':
+            self.reload(event)
 
     def __init__(self, dir, D, N, master=None):
         Frame.__init__(self, master)
