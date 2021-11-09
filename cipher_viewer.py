@@ -14,7 +14,7 @@ except ImportError:
     from tkinter import *
     from tkinter import filedialog
 from decrypt import decrypt_single_file
-import PIL.ImageTk
+import PIL.ImageTk, PIL.ImageSequence
 from io import BytesIO
 import webview
 
@@ -35,38 +35,69 @@ def webview_file_dialog():
 
 class App(Frame):
     def invalidate(self):
+        self.cancel()
+
+        self.canvas.delete("all")
         if self.im is None:
-            self.canvas.delete("all")
             return
 
-        im = self.im
         w, h = self.master.winfo_screenwidth(), self.master.winfo_screenheight()
-        imgWidth, imgHeight = im.size
-        if imgWidth > w or imgHeight > h:
-            ratio = min(w/imgWidth, h/imgHeight)
-            imgWidth = int(imgWidth*ratio)
-            imgHeight = int(imgHeight*ratio)
-            im = im.resize((imgWidth,imgHeight))
-        else:
-            ratio = min(w/imgWidth, h/imgHeight, 1.35)
-            imgWidth = int(imgWidth*ratio)
-            imgHeight = int(imgHeight*ratio)
-            im = im.resize((imgWidth,imgHeight))
-            
+        imgWidth, imgHeight = self.im.size
 
-        if self.im.mode == "1": # bitmap image
-            self.img = PIL.ImageTk.BitmapImage(im, foreground="white")
-        else:              # photo image
-            self.img = PIL.ImageTk.PhotoImage(im)
-        imagesprite = self.canvas.create_image(w/2,h/2,image=self.img)
+        photoes = []
+        for frame in PIL.ImageSequence.Iterator(self.im):
+            if imgWidth > w or imgHeight > h:
+                ratio = min(w/imgWidth, h/imgHeight)
+                imgWidth = int(imgWidth*ratio)
+                imgHeight = int(imgHeight*ratio)
+                frame = frame.resize((imgWidth,imgHeight))
+            else:
+                ratio = min(w/imgWidth, h/imgHeight, 1.35)
+                imgWidth = int(imgWidth*ratio)
+                imgHeight = int(imgHeight*ratio)
+                frame = frame.resize((imgWidth,imgHeight))
+
+            if self.im.mode == "1": # bitmap image
+                photo = PIL.ImageTk.BitmapImage(frame, foreground="white")
+            else:              # photo image
+                photo = PIL.ImageTk.PhotoImage(frame)
+            photoes.append(photo)
+
+        if len(photoes) == 0:
+            return
+
+        self.canvas.create_image(w/2, h/2, image=photoes[0])
+        if len(photoes) == 1:
+            return
+
+        try:
+            self.delay = self.im.info['duration']
+        except KeyError:
+            self.delay = 50
+
+        photo_index = 0
+        def play():
+            nonlocal photo_index
+            photo_index = (photo_index + 1) % len(photoes)
+            self.canvas.create_image(w/2, h/2, image=photoes[photo_index])
+            self.canceller = self.canvas.after(self.delay, play)
+
+        self.canceller = self.canvas.after(self.delay, play)
+
+    def cancel(self):
+        if self.canceller is not None:
+            self.canvas.after_cancel(self.canceller)
+            self.canceller = None
 
     def open(self, event=None):
+        self.cancel()
+
         _ = event
         filename = webview_file_dialog()
-        #filename = filedialog.askopenfilename(initialdir=self.dirname, filetypes=[("image files", ".png .webp .jpg .jpeg .bmp .png"), ("cipher files", ".cipher")])
-        self.open_(filename)
+        #filename = filedialog.askopenfilename(initialdir=self.dirname, filetypes=[("image files", ".png .webp .jpg .jpeg .bmp .png .gif"), ("cipher files", ".cipher")])
+        self.open_(filename, force_refresh=True)
 
-    def open_(self, filename=None, on_file_not_exists=None):
+    def open_(self, filename=None, on_file_not_exists=None, force_refresh=False):
         if filename == None:
             filename = self.cur
 
@@ -94,7 +125,7 @@ class App(Frame):
         dirname = os.path.dirname(filename)
         basename = os.path.basename(filename)
 
-        if dirname != self.dirname:
+        if dirname != self.dirname or force_refresh:
             self.chdir(dirname)
 
         self.cur = self.dir_images.index(basename)
@@ -126,20 +157,26 @@ class App(Frame):
         if fname.endswith(".cipher"):
             return True
 
-        return fname.endswith(".jpg") or fname.endswith(".jpeg") or fname.endswith(".bmp") or fname.endswith('png') or fname.endswith(".webp")
+        return fname.endswith(".jpg") or fname.endswith(".jpeg") or fname.endswith(".bmp") or fname.endswith('png') or fname.endswith(".webp") or fname.endswith(".gif")
 
     def prev(self, key_event=None):
+        self.cancel()
+
         if self.dirname == "" or len(self.dir_images) == 0 or (len(self.dir_images) == 1 and self.cur == 0):
             return
 
         self.open_(max(-1, self.cur-1), on_file_not_exists=lambda: self.prev())
 
     def next(self, key_event=None):
+        self.cancel()
+
         if self.dirname == "" or len(self.dir_images) == 0 or (len(self.dir_images) == 1 and self.cur == 0):
             return
         self.open_(self.cur+1)
 
     def delete(self, key_event=None, keep_file=False):
+        self.cancel()
+
         if self.cur < 0 or self.cur >= len(self.dir_images):
             return
 
@@ -151,6 +188,8 @@ class App(Frame):
         self.open_()
 
     def switch_to_parent(self, key_event=None):
+        self.cancel()
+
         if self.dirname == "":
             return
 
@@ -230,6 +269,7 @@ class App(Frame):
         fram.focus_set()
 
         self.pack()
+        self.canceller = None
         self.chdir(initial_dir, True)
 
 if __name__ == "__main__":
