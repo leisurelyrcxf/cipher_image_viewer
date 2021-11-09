@@ -44,7 +44,7 @@ class App(Frame):
         w, h = self.master.winfo_screenwidth(), self.master.winfo_screenheight()
         imgWidth, imgHeight = self.im.size
 
-        photoes = []
+        self.photoes = []
         for frame in PIL.ImageSequence.Iterator(self.im):
             if imgWidth > w or imgHeight > h:
                 ratio = min(w/imgWidth, h/imgHeight)
@@ -61,28 +61,29 @@ class App(Frame):
                 photo = PIL.ImageTk.BitmapImage(frame, foreground="white")
             else:              # photo image
                 photo = PIL.ImageTk.PhotoImage(frame)
-            photoes.append(photo)
+            self.photoes.append(photo)
 
-        if len(photoes) == 0:
+        if len(self.photoes) == 0:
             return
 
-        self.canvas.create_image(w/2, h/2, image=photoes[0])
-        if len(photoes) == 1:
+        self.canvas.create_image(w/2, h/2, image=self.photoes[0])
+        if len(self.photoes) == 1:
             return
-
-        try:
-            self.delay = self.im.info['duration']
-        except KeyError:
-            self.delay = 50
 
         photo_index = 0
+        photoes = self.photoes
+        try:
+            delay = self.im.info['duration']
+        except KeyError:
+            delay = 50
+
         def play():
-            nonlocal photo_index
+            nonlocal photo_index, photoes, delay
             photo_index = (photo_index + 1) % len(photoes)
             self.canvas.create_image(w/2, h/2, image=photoes[photo_index])
-            self.canceller = self.canvas.after(self.delay, play)
+            self.canceller = self.canvas.after(delay, play)
 
-        self.canceller = self.canvas.after(self.delay, play)
+        self.canceller = self.canvas.after(delay, play)
 
     def cancel(self):
         if self.canceller is not None:
