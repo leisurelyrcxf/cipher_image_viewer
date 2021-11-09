@@ -42,23 +42,27 @@ class App(Frame):
             return
 
         w, h = self.master.winfo_screenwidth(), self.master.winfo_screenheight()
-        imgWidth, imgHeight = self.im.size
-
+        try:
+            n_frames = self.im.n_frames
+            max_amplifier = 3
+        except:
+            n_frames = 1
+            max_amplifier = 1.5
         self.photoes = []
         for frame in PIL.ImageSequence.Iterator(self.im):
+            imgWidth, imgHeight = frame.size
             if imgWidth > w or imgHeight > h:
                 ratio = min(w/imgWidth, h/imgHeight)
-                imgWidth = int(imgWidth*ratio)
-                imgHeight = int(imgHeight*ratio)
-                frame = frame.resize((imgWidth,imgHeight))
             else:
-                ratio = min(w/imgWidth, h/imgHeight, 1.35)
-                imgWidth = int(imgWidth*ratio)
-                imgHeight = int(imgHeight*ratio)
-                frame = frame.resize((imgWidth,imgHeight))
+                ratio = min(w/imgWidth, h/imgHeight, max_amplifier)
+            imgWidth = int(imgWidth*ratio)
+            imgHeight = int(imgHeight*ratio)
 
+            frame = frame.resize((imgWidth,imgHeight))
             if self.im.mode == "1": # bitmap image
                 photo = PIL.ImageTk.BitmapImage(frame, foreground="white")
+            elif frame.mode == 'P':
+                photo = PIL.ImageTk.PhotoImage(frame.convert('RGBA'))
             else:              # photo image
                 photo = PIL.ImageTk.PhotoImage(frame)
             self.photoes.append(photo)
