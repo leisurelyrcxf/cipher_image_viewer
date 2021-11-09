@@ -19,6 +19,7 @@ from io import BytesIO
 import webview
 
 class App(Frame):
+
     def invalidate(self):
         self.cancel()
 
@@ -64,10 +65,12 @@ class App(Frame):
         try:
             delay = self.im.info['duration']
         except KeyError:
-            delay = 50
+            delay = 100
+        delay = max(delay, 100)
 
         def play():
             nonlocal photo_index, photoes, delay
+            # self.canvas.delete("all")
             photo_index = (photo_index + 1) % len(photoes)
             self.canvas.create_image(w/2, h/2, image=photoes[photo_index])
             self.canceller = self.canvas.after(delay, play)
