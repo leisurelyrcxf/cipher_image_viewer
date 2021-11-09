@@ -18,21 +18,6 @@ import PIL.ImageTk, PIL.ImageSequence
 from io import BytesIO
 import webview
 
-def webview_file_dialog():
-    file = None
-    def open_file_dialog(w):
-        nonlocal file
-        try:
-            file = w.create_file_dialog(webview.OPEN_DIALOG)[0]
-        except TypeError:
-            pass  # user exited file dialog without picking
-        finally:
-            w.destroy()
-    window = webview.create_window("", hidden=True)
-    webview.start(open_file_dialog, window)
-    # file will either be a string or None
-    return file
-
 class App(Frame):
     def invalidate(self):
         self.cancel()
@@ -44,7 +29,7 @@ class App(Frame):
         w, h = self.master.winfo_screenwidth(), self.master.winfo_screenheight()
         try:
             n_frames = self.im.n_frames
-            max_amplifier = 3
+            max_amplifier = 2
         except:
             n_frames = 1
             max_amplifier = 1.5
@@ -61,7 +46,7 @@ class App(Frame):
             frame = frame.resize((imgWidth,imgHeight))
             if self.im.mode == "1": # bitmap image
                 photo = PIL.ImageTk.BitmapImage(frame, foreground="white")
-            elif frame.mode == 'P':
+            elif self.im.mode == 'P':
                 photo = PIL.ImageTk.PhotoImage(frame.convert('RGBA'))
             else:              # photo image
                 photo = PIL.ImageTk.PhotoImage(frame)
@@ -98,9 +83,24 @@ class App(Frame):
         self.cancel()
 
         _ = event
-        filename = webview_file_dialog()
-        #filename = filedialog.askopenfilename(initialdir=self.dirname, filetypes=[("image files", ".png .webp .jpg .jpeg .bmp .png .gif"), ("cipher files", ".cipher")])
+        filename = self.webview_file_dialog()
+        #filename = filedialog.askopenfilename(initialdir=self.dirname, filetypes=[("image files", ".png .webp .jpg .jpeg .bmp .gif"), ("cipher files", ".cipher")])
         self.open_(filename, force_refresh=True)
+
+    def webview_file_dialog(self):
+        file = None
+        def open_file_dialog(w):
+            nonlocal file
+            try:
+                file = w.create_file_dialog(webview.OPEN_DIALOG, directory=self.dirname, file_types=("Image files (*.png;*.webp;*.jpg;*.jpeg;*.bmp;*.gif)", "cipher files (*.cipher)"))[0]
+            except TypeError:
+                pass  # user exited file dialog without picking
+            finally:
+                w.destroy()
+        window = webview.create_window(self, hidden=True)
+        webview.start(open_file_dialog, window)
+        # file will either be a string or None
+        return file
 
     def open_(self, filename=None, on_file_not_exists=None, force_refresh=False):
         if filename == None:
@@ -165,18 +165,15 @@ class App(Frame):
         return fname.endswith(".jpg") or fname.endswith(".jpeg") or fname.endswith(".bmp") or fname.endswith('png') or fname.endswith(".webp") or fname.endswith(".gif")
 
     def prev(self, key_event=None):
-        self.cancel()
-
         if self.dirname == "" or len(self.dir_images) == 0 or (len(self.dir_images) == 1 and self.cur == 0):
             return
-
+        self.cancel()
         self.open_(max(-1, self.cur-1), on_file_not_exists=lambda: self.prev())
 
     def next(self, key_event=None):
-        self.cancel()
-
         if self.dirname == "" or len(self.dir_images) == 0 or (len(self.dir_images) == 1 and self.cur == 0):
             return
+        self.cancel()
         self.open_(self.cur+1)
 
     def delete(self, key_event=None, keep_file=False):
