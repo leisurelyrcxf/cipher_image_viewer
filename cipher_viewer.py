@@ -93,7 +93,6 @@ class App(Frame):
 
         _ = event
         filename = self.webview_file_dialog()
-        #filename = filedialog.askopenfilename(initialdir=self.dirname, filetypes=[("image files", ".png .webp .jpg .jpeg .bmp .gif"), ("cipher files", ".cipher")])
         self.open_(filename, force_refresh=True)
 
     def webview_file_dialog(self):
@@ -101,7 +100,7 @@ class App(Frame):
         def open_file_dialog(w):
             nonlocal file
             try:
-                file = w.create_file_dialog(webview.OPEN_DIALOG, directory=self.dirname, file_types=("Image files (*.png;*.webp;*.jpg;*.jpeg;*.bmp;*.gif)", "cipher files (*.cipher)"))[0]
+                file = w.create_file_dialog(webview.OPEN_DIALOG, directory=self.dirname, file_types=("All (*.png;*.webp;*.jpg;*.jpeg;*.bmp;*.gif;*.cipher)", "Image files (*.png;*.webp;*.jpg;*.jpeg;*.bmp;*.gif)", "cipher files (*.cipher)"))[0]
             except TypeError:
                 pass  # user exited file dialog without picking
             finally:
@@ -162,6 +161,7 @@ class App(Frame):
             return
 
         print("Opened file '%s'" %  basename)
+        self.master.title(filename)
         self.invalidate()
         self.num_page=0
         self.num_page_tv.set(str(self.num_page+1))
@@ -170,8 +170,7 @@ class App(Frame):
     def image_pred(self, fname):
         fname = fname.lower()
         if fname.endswith(".cipher"):
-            return True
-
+            fname = fname[:len(fname)-len(".cipher")]
         return fname.endswith(".jpg") or fname.endswith(".jpeg") or fname.endswith(".bmp") or fname.endswith('png') or fname.endswith(".webp") or fname.endswith(".gif")
 
     def prev(self, key_event=None):
