@@ -47,7 +47,7 @@ class App(Frame):
             imgHeight = int(imgHeight*ratio)
 
             frame = frame.resize((imgWidth,imgHeight))
-            if self.im.mode == "1": # bitmap image
+            if self.im.mode == "1":  # bitmap image
                 photo = PIL.ImageTk.BitmapImage(frame, foreground="white")
             elif self.im.mode == 'P':
                 photo = PIL.ImageTk.PhotoImage(frame.convert('RGBA'))
@@ -58,6 +58,7 @@ class App(Frame):
         if len(self.photoes) == 0:
             return
 
+        print("totally %d frames" % len(self.photoes))
         self.canvas.create_image(w/2, h/2, image=self.photoes[0])
         if len(self.photoes) == 1:
             return
