@@ -59,9 +59,9 @@ def encrypt_single_file(path, E, N, do_reverse=False):
     enwr.write(bytes(chksum, encoding='utf8'))
     size=os.path.getsize(path)
     
-    startTimeStamp=time.clock()
+    startTimeStamp=time.perf_counter()
     while True:
-        SpeedTimeS=time.clock()
+        SpeedTimeS=time.perf_counter()
         buf=r.read(byte_read)
         
         if not buf:
@@ -100,7 +100,7 @@ def encrypt_single_file(path, E, N, do_reverse=False):
             i+=2
         enwr.write(bytes(b))
         pos=r.tell()
-        SpeedTimeE=time.clock()
+        SpeedTimeE=time.perf_counter()
         SpeedTime=SpeedTimeE-SpeedTimeS
         time_remained=SpeedTime*(size-pos)/byte_read
         h=int(time_remained/3600)
@@ -114,7 +114,7 @@ def encrypt_single_file(path, E, N, do_reverse=False):
     size=float(r.tell())
     r.close()
     os.remove(path)
-    endTimeStamp=time.clock()
+    endTimeStamp=time.perf_counter()
     print("The file \""+path+"\" has been encrypted successfully! Process totally %6.2f kb's document, cost %f seconds.\n"%((float(size)/1000),endTimeStamp-startTimeStamp))
 
 if __name__=="__main__":
