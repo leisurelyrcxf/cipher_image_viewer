@@ -39,7 +39,7 @@ def decrypt_single_file(filename, D, N, debug=False, memory_mode=False):
     try:
         flag=0
         print("Processing now: \""+filename+"\"")
-        startTimeStamp=time.clock()
+        startTimeStamp=time.perf_counter()
         src_rd=open(filename,'rb') #r stands for the file that is gonna be cyphered
         verify_chksum=False
         chksum_indication=src_rd.read(16)
@@ -85,7 +85,7 @@ def decrypt_single_file(filename, D, N, debug=False, memory_mode=False):
             flag=0
 
         while True:
-            SpeedTimeS=time.clock()
+            SpeedTimeS=time.perf_counter()
             line=src_rd.read(src_byte_read)
             if not line:
                 break
@@ -131,7 +131,7 @@ def decrypt_single_file(filename, D, N, debug=False, memory_mode=False):
 
             decrypt_writer.write(bytes(a))
             pos=src_rd.tell()
-            SpeedTimeE=time.clock()
+            SpeedTimeE=time.perf_counter()
             SpeedTime=SpeedTimeE-SpeedTimeS
             time_remained=SpeedTime*(size-pos)/src_byte_read
             h=int(time_remained/3600)
@@ -183,7 +183,7 @@ def decrypt_single_file(filename, D, N, debug=False, memory_mode=False):
                 return -1, None
         else:
             os.remove(filename)
-        endTimeStamp=time.clock()
+        endTimeStamp=time.perf_counter()
         print("The file \""+filename+"\" has been decrypted successfully. Process totally %6.2f kb's document, cost %f seconds.\n"%(size/1000,endTimeStamp-startTimeStamp))
         return 0, None
     except:

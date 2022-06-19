@@ -10,7 +10,7 @@ from reverse import reverse, reverse_back
 
 def encrypt(dir, E, N, do_reverse=False):
     if os.path.isdir(dir):
-        x=input("Do you really want to encrypt all the subdirectories of '%s', press y to continue...\n" % dir)
+        x=input("Do you really want to encrypt all the subdirectories of '%s', press y to continue...\n" % os.path.abspath(dir))
         if x != 'y' and x != 'Y':
             exit(1)
     encrypt_(dir, E, N, do_reverse)

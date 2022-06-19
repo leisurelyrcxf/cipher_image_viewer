@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 import PIL.Image
+PIL.Image.MAX_IMAGE_PIXELS = 1058288540
 from PIL import ImageFile
 ImageFile.LOAD_TRUNCATED_IMAGES = True
 import os
@@ -140,6 +141,7 @@ class App(Frame):
             self.chdir(dirname)
 
         self.cur = self.dir_images.index(basename)
+        print("Opening file '%s'" % basename)
 
         try:
             if filename.endswith(".cipher"):
@@ -176,6 +178,13 @@ class App(Frame):
         self.cancel()
         self.open_(self.cur-1, on_file_not_exists=lambda: self.prev())
 
+    def on_click(self, event):
+        reserved = 47
+        if event.x < self.canvas.winfo_width()/2-reserved:
+            self.prev()
+        elif event.x > self.canvas.winfo_width()/2+reserved:
+            self.next()
+
     def next(self, key_event=None):
         if self.dirname == "" or len(self.dir_images) == 0 or (len(self.dir_images) == 1 and self.cur == 0):
             return
@@ -207,7 +216,9 @@ class App(Frame):
         filename = self.dir_images[self.cur]
         del self.dir_images[self.cur]
         if not keep_file:
-            send2trash(os.path.join(self.dirname, filename))
+            removing_fname = os.path.join(self.dirname, filename)
+            send2trash(removing_fname)
+            print("Trashed file '%s'" % removing_fname)
         
         self.open_()
 
@@ -249,8 +260,10 @@ class App(Frame):
             self.switch_to_parent(event)
         elif event.char == 'r':
             self.reload(event)
+        elif event.char == 'o':
+            self.open(event)
 
-    def __init__(self, dir, D, N, master=None):
+    def __init__(self, dir, master=None):
         Frame.__init__(self, master)
         self.master.title('Image Viewer')
         try:
@@ -264,18 +277,45 @@ class App(Frame):
         except:
             pass
 
+        from pathlib import Path
+        home = Path.home()
         initial_dir = dir
         if initial_dir == "":
-            from pathlib import Path
-            initial_dir = Path.home()
-            pic_dir = os.path.join(initial_dir, "Pictures")
-            if os.path.isdir(pic_dir): initial_dir = pic_dir
+            initial_dir = home
+            pic_dir = os.path.join(home, "Pictures")
+            if os.path.isdir(pic_dir):
+                initial_dir = pic_dir
+        print("initial_dir: %s" % initial_dir)
 
         self.im = None
         self.num_page = 0
         self.num_page_tv = StringVar()
+
+        D, N = 1157, 61823
+        if os.path.exists(os.path.join(home, ".config/cipher_viewer/keys")):
+            with open(os.path.join(home, ".config/cipher_viewer/keys"), "r") as fr:
+                line = fr.readline()
+                parts = line.split(" ")
+                if not parts:
+                    print("invalid config file")
+                    exit(1)
+
+                if len(parts) != 2:
+                    print("invalid config file")
+                    exit(1)
+
+                D = int(parts[0].strip())
+                N = int(parts[1].strip())
+
+                if N > 256**3:
+                    print("N must be not greater than 256*256*256")
+                    exit(1)
+                if N < 32*256:
+                    print("N must be not less than 32*256")
+                    exit(1)
         self.D = D
         self.N = N
+        print("D: %d, N: %d" % (self.D, self.N))
 
         fram = Frame(self)
         fram.pack(side=TOP, fill=BOTH)
@@ -289,6 +329,8 @@ class App(Frame):
         self.canvas = Canvas(fram,width=w,height=h)
         self.canvas.pack()
         self.canvas.configure(background='black')
+        self.canvas.bind("<ButtonPress-1>", self.on_click)
+
         fram.focus_set()
 
         self.pack()
@@ -298,14 +340,6 @@ class App(Frame):
 if __name__ == "__main__":
     import argparse
     parser = argparse.ArgumentParser(description='Parameters')
-    parser.add_argument('-d', type=int, dest='D', help='D', default=1157)
-    parser.add_argument('-n', type=int, dest='N', help='N', default=61823)
     parser.add_argument('dir', nargs='?', default='')
     args = parser.parse_args()
-    if args.N > 256**3:
-        print("N must be not greater than 256*256*256")
-        exit(1)
-    if args.N < 32*256:
-        print("N must be not less than 32*256")
-        exit(1)
-    app = App(args.dir, args.D, args.N); app.mainloop()
+    app = App(args.dir); app.mainloop()
