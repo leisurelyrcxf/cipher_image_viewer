@@ -1,4 +1,6 @@
 #!/bin/sh
+pip install send2trash
+
 sudo apt install python3-pil python3-pil.imagetk
 
 ##### webview

@@ -14,10 +14,11 @@ try:
 except ImportError:
     from tkinter import *
     from tkinter import filedialog
-from decrypt import decrypt_single_file
 import PIL.ImageTk, PIL.ImageSequence
 from io import BytesIO
 import webview
+from decrypt import decrypt_single_file
+
 
 class App(Frame):
 
@@ -141,7 +142,6 @@ class App(Frame):
             self.chdir(dirname)
 
         self.cur = self.dir_images.index(basename)
-        print("Opening file '%s'" % basename)
 
         try:
             if filename.endswith(".cipher"):
@@ -160,6 +160,7 @@ class App(Frame):
                 on_file_not_exists()
             return
 
+        print("Opened file '%s'" %  basename)
         self.invalidate()
         self.num_page=0
         self.num_page_tv.set(str(self.num_page+1))
@@ -291,30 +292,8 @@ class App(Frame):
         self.num_page = 0
         self.num_page_tv = StringVar()
 
-        D, N = 1157, 61823
-        if os.path.exists(os.path.join(home, ".config/cipher_viewer/keys")):
-            with open(os.path.join(home, ".config/cipher_viewer/keys"), "r") as fr:
-                line = fr.readline()
-                parts = line.split(" ")
-                if not parts:
-                    print("invalid config file")
-                    exit(1)
-
-                if len(parts) != 2:
-                    print("invalid config file")
-                    exit(1)
-
-                D = int(parts[0].strip())
-                N = int(parts[1].strip())
-
-                if N > 256**3:
-                    print("N must be not greater than 256*256*256")
-                    exit(1)
-                if N < 32*256:
-                    print("N must be not less than 32*256")
-                    exit(1)
-        self.D = D
-        self.N = N
+        import config
+        self.D, self.N = config.get_keys()
         print("D: %d, N: %d" % (self.D, self.N))
 
         fram = Frame(self)

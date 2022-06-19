@@ -235,8 +235,6 @@ def guess(filename,num):
 if __name__=='__main__':
     import argparse
     parser = argparse.ArgumentParser(description='Parameters')
-    parser.add_argument('-d', type=int, dest='D', help='D', default=1157)
-    parser.add_argument('-n', type=int, dest='N', help='N', default=61823)
     parser.add_argument('dir', nargs='?', default='')
     parser.add_argument('--debug', action='store_true', dest='debug', help='debug mode, will keep error files')
     args = parser.parse_args()
@@ -244,11 +242,8 @@ if __name__=='__main__':
         print("must provide dir/file name")
         parser.print_help()
         exit(1)
-    if args.N > 256**3:
-        print("N must be not greater than 256*256*256")
-        exit(1)
-    if args.N < 32*256:
-        print("N must be not less than 32*256")
-        exit(1)
-    decrypt(args.dir, args.D, args.N, args.debug)
+
+    import config
+    D, N = config.get_keys()
+    decrypt(args.dir, D, N, args.debug)
 
