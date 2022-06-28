@@ -4,10 +4,10 @@ def get_keys():
 
     import os
     config_dir=os.path.join(home, ".config/cipher_viewer")
-    if os.path.exists(os.path.join(config_dir, "keys")):
-        D, N = load_keys(os.path.join(config_dir, "keys"))
-    elif os.path.exists(os.path.join(config_dir, "default_keys")):
-        D, N = load_keys(os.path.join(config_dir, "default_keys"))
+    if os.path.exists(os.path.join(config_dir, "decode_key")):
+        D, N = load_keys(os.path.join(config_dir, "decode_key"))
+    elif os.path.exists(os.path.join(config_dir, "default_decode_key")):
+        D, N = load_keys(os.path.join(config_dir, "default_decode_key"))
     else:
         print("can't find decrypt keys config file")
         exit(1)
