@@ -71,8 +71,8 @@ class App(Frame):
 
         def play():
             nonlocal photo_index, photoes, delay
-            # self.canvas.delete("all")
             photo_index = (photo_index + 1) % len(photoes)
+            self.canvas.delete("all")
             self.canvas.create_image(w / 2, h / 2, image=photoes[photo_index])
             x_delay = delay
             if photo_index == len(photoes) - 1:
