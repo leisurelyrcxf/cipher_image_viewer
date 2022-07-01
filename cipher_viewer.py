@@ -66,6 +66,7 @@ class App(Frame):
     def cancel(self):
         if self.gif is not None:
             self.gif.cancel()
+            self.gif = None
 
     def invalidate(self):
         self.cancel()
