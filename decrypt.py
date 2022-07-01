@@ -30,13 +30,15 @@ def decrypt(dire, D, N, debug=False):
 
         print("ignore file '%s', which is neither directory not file" % dire)
         return 0
-    except:
+    except Exception as e:
+        print("decrypt failed: %s" % e.__str__())
         print(traceback.format_exc())
         return -1
 
 
 def decrypt_single_file(filename, D, N, debug=False, memory_mode=False):
     print("D: %d, N: %d" % (D, N))
+    decrypt_writer, flag = None, 0
     try:
         flag = 0
         print("Processing now: \"" + filename + "\"")
@@ -61,14 +63,14 @@ def decrypt_single_file(filename, D, N, debug=False, memory_mode=False):
         src_byte_read = r0_byte_read
         if N > 65536:
             src_byte_read = int(r0_byte_read * 3 / 2)
+        decrypted_tmp_fname = ''
         if (not memory_mode) and os.path.isfile(decrypted_fname):
-            decrypted_tmp_fname = ''
             byte_processed = os.path.getsize(decrypted_fname)  # get the size of file which has already been processed
-            decrypted_tmp_fname = decrypted_fname + '.tmp'  # temp file for copy and decrpyt
+            decrypted_tmp_fname = decrypted_fname + '.tmp'  # temp file for copy and decrypt
             decrypt_writer = open(decrypted_tmp_fname, 'wb')  # write stream for temp file
 
             n = byte_processed / r0_byte_read
-            r0 = open(decrypted_fname, 'rb')  # r0 stands for the read stream for partly decrpyted cypherfile
+            r0 = open(decrypted_fname, 'rb')  # r0 stands for the read stream for partly decrypted cipher file
             while 1:
                 line = r0.read(r0_byte_read)
                 if not line or len(line) < r0_byte_read:
@@ -90,46 +92,45 @@ def decrypt_single_file(filename, D, N, debug=False, memory_mode=False):
             if not line:
                 break
 
-            b = list(line)
             if N > 65536:
-                b_remain = len(b) % 3
+                b_remain = len(line) % 3
                 assert (b_remain == 0 or b_remain == 1)
-                a = [0] * (int(len(b) / 3) * 2 + b_remain)
-                a[-1] = b[-1]
+                output = bytearray(int(len(line) / 3) * 2 + b_remain)
+                output[-1] = line[-1]
                 i = 0
                 j = 0
                 while True:
-                    if j + 2 >= len(b):
+                    if j + 2 >= len(line):
                         break
-                    first = int(b[j])
-                    second = int(b[j + 1])
-                    third = int(b[j + 2])
+                    first = int(line[j])
+                    second = int(line[j + 1])
+                    third = int(line[j + 2])
                     encoded = first * 65536 + second * 256 + third
                     ori = pow(encoded, D, N)
-                    if ori > 65536:
+                    if ori >= 65536:
                         raise Exception("FATAL ERROR: ori(%d) > 65536, maybe you are using a wrong key?" % ori)
-                    a[i] = int(ori >> 8)
-                    a[i + 1] = int(ori & 255)
+                    output[i] = int(ori >> 8)
+                    output[i + 1] = int(ori & 255)
                     i += 2
                     j += 3
             else:
-                a = b
+                output = bytearray(len(line))
                 i = 0
                 while True:
-                    if i + 1 >= len(a):
+                    if i + 1 >= len(line):
                         break
-                    ori1 = int(a[i])
-                    ori2 = int(a[i + 1])
-                    ori = ori1 * 256 + ori2
-                    if (ori < N):
-                        ori = pow(ori, D, N)
-                    ori1 = ori >> 8
-                    ori2 = ori & 255
-                    a[i] = int(ori1)
-                    a[i + 1] = int(ori2)
+                    first = int(line[i])
+                    second = int(line[i + 1])
+                    encoded = first * 256 + second
+                    if encoded < N:
+                        ori = pow(encoded, D, N)
+                    else:
+                        ori = encoded
+                    output[i] = int(ori >> 8)
+                    output[i + 1] = int(ori & 255)
                     i += 2
 
-            decrypt_writer.write(bytes(a))
+            decrypt_writer.write(output)
             pos = src_rd.tell()
             SpeedTimeE = time.perf_counter()
             SpeedTime = SpeedTimeE - SpeedTimeS
@@ -149,7 +150,8 @@ def decrypt_single_file(filename, D, N, debug=False, memory_mode=False):
 
         if flag:
             os.remove(decrypted_fname)
-            os.rename(decrypted_tmp_fname, decrypted_fname)
+            if decrypted_tmp_fname != "":
+                os.rename(decrypted_tmp_fname, decrypted_fname)
 
         if memory_mode:
             if not decrypted_fname.endswith(".reverse"):
@@ -190,7 +192,8 @@ def decrypt_single_file(filename, D, N, debug=False, memory_mode=False):
         return 0, None
     except:
         print(traceback.format_exc())
-        decrypt_writer.close()
+        if decrypt_writer is not None:
+            decrypt_writer.close()
         portalocker.unlock(src_rd)
         print("Unlocked src_fd")
         src_rd.close()
