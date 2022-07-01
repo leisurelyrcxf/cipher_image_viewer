@@ -1,4 +1,5 @@
 import rsa
+
 def main():
     (publicKey,privateKey)=rsa.newkeys(512)
     print type(privateKey)

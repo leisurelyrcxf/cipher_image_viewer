@@ -1,5 +1,6 @@
 from typing import List
 
+
 def trial_division(n: int) -> List[int]:
     a = []
     while n % 2 == 0:
@@ -16,9 +17,9 @@ def trial_division(n: int) -> List[int]:
     # Only odd number is possible
     return a
 
+
 if __name__ == "__main__":
     import sys
-    factors=trial_division(int(sys.argv[1]))
-    print(factors)
-    
 
+    factors = trial_division(int(sys.argv[1]))
+    print(factors)
