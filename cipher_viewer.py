@@ -97,10 +97,14 @@ class App(Frame):
 
     def webview_file_dialog(self):
         file = None
+
         def open_file_dialog(w):
             nonlocal file
             try:
-                file = w.create_file_dialog(webview.OPEN_DIALOG, directory=self.dirname, file_types=("All (*.png;*.webp;*.jpg;*.jpeg;*.bmp;*.gif;*.cipher)", "Image files (*.png;*.webp;*.jpg;*.jpeg;*.bmp;*.gif)", "cipher files (*.cipher)"))[0]
+                file = w.create_file_dialog(webview.OPEN_DIALOG, directory=self.dirname,
+                                            file_types=("All (*.png;*.webp;*.jpg;*.jpeg;*.bmp;*.gif;*.cipher)",
+                                                        "Image files (*.png;*.webp;*.jpg;*.jpeg;*.bmp;*.gif)",
+                                                        "cipher files (*.cipher)"))[0]
             except TypeError:
                 pass  # user exited file dialog without picking
             finally:
@@ -111,7 +115,7 @@ class App(Frame):
         return file
 
     def open_(self, filename=None, on_file_not_exists=None, force_refresh=False):
-        if filename == None:
+        if filename is None:
             filename = self.cur
 
         if type(filename) is int:
@@ -120,7 +124,7 @@ class App(Frame):
                 self.invalidate()
                 return
 
-            filename = os.path.join(self.dirname, self.dir_images[filename%len(self.dir_images)])
+            filename = os.path.join(self.dirname, self.dir_images[filename % len(self.dir_images)])
 
         if type(filename) is not str:
             if filename != ():
@@ -138,10 +142,17 @@ class App(Frame):
         dirname = os.path.dirname(filename)
         basename = os.path.basename(filename)
 
-        if dirname != self.dirname or force_refresh:
+        # Update current dir
+        if (dirname != self.dirname and os.path.abspath(dirname) != self.dirname) or force_refresh:
             self.chdir(dirname)
 
-        self.cur = self.dir_images.index(basename)
+        # Update cur.
+        try:
+            self.cur = self.dir_images.index(basename)
+        except ValueError:
+            self.cur = 0
+            print("Can't find file '%s' in dir '%s'" % (filename, self.dirname))
+            return
 
         try:
             if filename.endswith(".cipher"):
@@ -167,7 +178,8 @@ class App(Frame):
         self.num_page_tv.set(str(self.num_page+1))
         return
 
-    def image_pred(self, fname):
+    @staticmethod
+    def image_pred(fname):
         fname = fname.lower()
         if fname.endswith(".cipher"):
             fname = fname[:len(fname)-len(".cipher")]
@@ -197,15 +209,16 @@ class App(Frame):
             return
 
         cur_fname = ''
-        if self.cur >= 0 and self.cur < len(self.dir_images):
+        if 0 <= self.cur < len(self.dir_images):
             cur_fname = self.dir_images[self.cur]
 
         self.chdir(self.dirname)
-
-        try:
-            self.cur = self.dir_images.index(cur_fname)
-        except:
-            self.cur = 0
+        self.cur = 0
+        if cur_fname != '':
+            try:
+                self.cur = self.dir_images.index(cur_fname)
+            except ValueError:
+                pass
         self.open_()
 
     def delete(self, key_event=None, keep_file=False):
@@ -229,12 +242,15 @@ class App(Frame):
         if self.dirname == "":
             return
 
-        p=str(Path(self.dirname).parent)
+        p = str(Path(self.dirname).parent)
         if p == self.dirname:
             return
-        self.chdir(p, True)
 
-    def chdir(self, dirname, open_first=False):
+        self.chdir(p)
+        self.cur = 0
+        self.open_()
+
+    def chdir(self, dirname):
         self.dirname = os.path.abspath(dirname)
 
         self.dir_images = []
@@ -242,13 +258,9 @@ class App(Frame):
             if self.image_pred(f):
                 self.dir_images.append(f)
         self.dir_images.sort()
-        self.cur = 0
 
-        print("Images in dir '%s'" % self.dirname)
+        print("Images in dir '%s': " % self.dirname)
         print(self.dir_images)
-
-        if open_first:
-            self.open_() 
 
     def key_handler(self, event):
         if event.char == 'h':
@@ -278,14 +290,26 @@ class App(Frame):
         except:
             pass
 
+        self.dirname = ""
+        self.dir_images = []
+
         from pathlib import Path
         home = Path.home()
-        initial_dir = dir
-        if initial_dir == "":
+        if dir == "":
             initial_dir = home
             pic_dir = os.path.join(home, "Pictures")
             if os.path.isdir(pic_dir):
                 initial_dir = pic_dir
+            self.cur = 0
+        else:
+            if os.path.isdir(dir):
+                initial_dir = dir
+                self.cur = 0
+            elif os.path.isfile(dir):
+                initial_dir = os.path.dirname(dir)
+                self.cur = dir
+            else:
+                raise Exception("'%s' not exists" % dir)
         print("initial_dir: %s" % initial_dir)
 
         self.im = None
@@ -314,7 +338,10 @@ class App(Frame):
 
         self.pack()
         self.canceller = None
-        self.chdir(initial_dir, True)
+
+        self.chdir(initial_dir)
+        self.open_()
+
 
 if __name__ == "__main__":
     import argparse
