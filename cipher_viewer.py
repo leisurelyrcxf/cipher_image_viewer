@@ -32,23 +32,19 @@ class App(Frame):
             return
 
         w, h = self.master.winfo_screenwidth(), self.master.winfo_screenheight()
-        try:
-            n_frames = self.im.n_frames
-            max_amplifier = 2
-        except:
-            n_frames = 1
-            max_amplifier = 1.5
-        self.photoes = []
+        max_amplifier = 2
+        self.photoes = []  # NOTE: you may think you can replace
+        # self.photoes with photoes, but then the program won't work.
         for frame in PIL.ImageSequence.Iterator(self.im):
-            imgWidth, imgHeight = frame.size
-            if imgWidth > w or imgHeight > h:
-                ratio = min(w / imgWidth, h / imgHeight)
+            img_width, img_height = frame.size
+            if img_width > w or img_height > h:
+                ratio = min(w / img_width, h / img_height)
             else:
-                ratio = min(w / imgWidth, h / imgHeight, max_amplifier)
-            imgWidth = int(imgWidth * ratio)
-            imgHeight = int(imgHeight * ratio)
+                ratio = min(w / img_width, h / img_height, max_amplifier)
+            img_width = int(img_width * ratio)
+            img_height = int(img_height * ratio)
 
-            frame = frame.resize((imgWidth, imgHeight))
+            frame = frame.resize((img_width, img_height))
             if self.im.mode == "1":  # bitmap image
                 photo = PIL.ImageTk.BitmapImage(frame, foreground="white")
             elif self.im.mode == 'P':
@@ -91,9 +87,9 @@ class App(Frame):
             self.canceller = None
 
     def open(self, event=None):
-        self.cancel()
-
         _ = event
+
+        self.cancel()
         filename = self.webview_file_dialog()
         self.open_(filename, force_refresh=True)
 
@@ -296,6 +292,7 @@ class App(Frame):
 
         self.dirname = ""
         self.dir_images = []
+        self.photoes = []
 
         from pathlib import Path
         home = Path.home()
