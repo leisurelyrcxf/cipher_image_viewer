@@ -34,7 +34,10 @@ class Gif:
         self.canceller = None
         self.is_paused = False
 
-    def play(self):
+    def play(self, draw_current=False):
+        if draw_current:
+            self.canvas.create_image(self.w / 2, self.h / 2, image=self.photoes[self.photo_index])
+
         photoes, delay = self.photoes, self.delay
 
         def next_frame():
@@ -103,8 +106,9 @@ class App(Frame):
 
         print("totally %d frames" % len(photoes))
 
-        self.canvas.create_image(w / 2, h / 2, image=photoes[0])
         if len(photoes) == 1:
+            self.photo = photoes[0]
+            self.canvas.create_image(w / 2, h / 2, image=self.photo)
             return
 
         try:
@@ -112,9 +116,8 @@ class App(Frame):
         except KeyError:
             delay = 100
         delay = max(delay, 100)
-
         self.gif = Gif(self.canvas, photoes, w, h, delay)
-        self.gif.play()
+        self.gif.play(draw_current=True)
 
     def open(self, event=None):
         _ = event
@@ -334,6 +337,7 @@ class App(Frame):
         self.dirname = ""
         self.dir_images = []
         self.gif = None  # type: Gif
+        self.photo = None
         self.width = 0
 
         from pathlib import Path
