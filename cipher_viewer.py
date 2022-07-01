@@ -38,35 +38,34 @@ class App(Frame):
         except:
             n_frames = 1
             max_amplifier = 1.5
-        self.photoes = []
+        photoes = []
         for frame in PIL.ImageSequence.Iterator(self.im):
-            imgWidth, imgHeight = frame.size
-            if imgWidth > w or imgHeight > h:
-                ratio = min(w / imgWidth, h / imgHeight)
+            img_width, img_height = frame.size
+            if img_width > w or img_height > h:
+                ratio = min(w / img_width, h / img_height)
             else:
-                ratio = min(w / imgWidth, h / imgHeight, max_amplifier)
-            imgWidth = int(imgWidth * ratio)
-            imgHeight = int(imgHeight * ratio)
+                ratio = min(w / img_width, h / img_height, max_amplifier)
+            img_width = int(img_width * ratio)
+            img_height = int(img_height * ratio)
 
-            frame = frame.resize((imgWidth, imgHeight))
+            frame = frame.resize((img_width, img_height))
             if self.im.mode == "1":  # bitmap image
                 photo = PIL.ImageTk.BitmapImage(frame, foreground="white")
             elif self.im.mode == 'P':
                 photo = PIL.ImageTk.PhotoImage(frame.convert('RGBA'))
             else:  # photo image
                 photo = PIL.ImageTk.PhotoImage(frame)
-            self.photoes.append(photo)
+            photoes.append(photo)
 
-        if len(self.photoes) == 0:
+        if len(photoes) == 0:
             return
 
-        print("totally %d frames" % len(self.photoes))
-        self.canvas.create_image(w / 2, h / 2, image=self.photoes[0])
-        if len(self.photoes) == 1:
+        print("totally %d frames" % len(photoes))
+        self.canvas.create_image(w / 2, h / 2, image=photoes[0])
+        if len(photoes) == 1:
             return
 
         photo_index = 0
-        photoes = self.photoes
         try:
             delay = self.im.info['duration']
         except KeyError:
@@ -91,9 +90,9 @@ class App(Frame):
             self.canceller = None
 
     def open(self, event=None):
-        self.cancel()
-
         _ = event
+
+        self.cancel()
         filename = self.webview_file_dialog()
         self.open_(filename, force_refresh=True)
 
