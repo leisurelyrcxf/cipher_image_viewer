@@ -22,7 +22,50 @@ import webview
 from decrypt import decrypt_single_file
 
 
+class Gif:
+    def __init__(self, canvas, photoes, w, h, delay):
+        self.canvas = canvas
+        self.photoes = photoes
+        self.w = w
+        self.h = h
+        self.delay = delay
+
+        self.photo_index = 0
+        self.canceller = None
+        self.is_paused = False
+
+    def play(self):
+        photoes, delay = self.photoes, self.delay
+
+        def next_frame():
+            nonlocal photoes, delay
+            self.photo_index = (self.photo_index + 1) % len(photoes)
+            self.canvas.delete("all")
+            self.canvas.create_image(self.w / 2, self.h / 2, image=photoes[self.photo_index])
+            x_delay = delay
+            if self.photo_index == len(photoes) - 1:
+                x_delay = 200
+            self.canceller = self.canvas.after(x_delay, next_frame)
+        self.canceller = self.canvas.after(delay, next_frame)
+
+    def cancel(self):
+        if self.canceller is not None:
+            self.canvas.after_cancel(self.canceller)
+            self.canceller = None
+
+    def pause(self):
+        if self.is_paused:
+            self.play()
+        else:
+            self.cancel()
+        self.is_paused = not self.is_paused
+
+
 class App(Frame):
+
+    def cancel(self):
+        if self.gif is not None:
+            self.gif.cancel()
 
     def invalidate(self):
         self.cancel()
@@ -33,8 +76,7 @@ class App(Frame):
 
         w, h = self.master.winfo_screenwidth(), self.master.winfo_screenheight()
         max_amplifier = 2
-        self.photoes = []  # NOTE: you may think you can replace
-        # self.photoes with photoes, but then the program won't work.
+        photoes = []
         for frame in PIL.ImageSequence.Iterator(self.im):
             img_width, img_height = frame.size
             if img_width > w or img_height > h:
@@ -51,40 +93,24 @@ class App(Frame):
                 photo = PIL.ImageTk.PhotoImage(frame.convert('RGBA'))
             else:  # photo image
                 photo = PIL.ImageTk.PhotoImage(frame)
-            self.photoes.append(photo)
+            photoes.append(photo)
 
-        if len(self.photoes) == 0:
+        if len(photoes) == 0:
             return
 
-        print("totally %d frames" % len(self.photoes))
-        self.canvas.create_image(w / 2, h / 2, image=self.photoes[0])
-        if len(self.photoes) == 1:
+        print("totally %d frames" % len(photoes))
+        self.canvas.create_image(w / 2, h / 2, image=photoes[0])
+        if len(photoes) == 1:
             return
 
-        photo_index = 0
-        photoes = self.photoes
         try:
             delay = self.im.info['duration']
         except KeyError:
             delay = 100
         delay = max(delay, 100)
 
-        def play():
-            nonlocal photo_index, photoes, delay
-            photo_index = (photo_index + 1) % len(photoes)
-            self.canvas.delete("all")
-            self.canvas.create_image(w / 2, h / 2, image=photoes[photo_index])
-            x_delay = delay
-            if photo_index == len(photoes) - 1:
-                x_delay = 200
-            self.canceller = self.canvas.after(x_delay, play)
-
-        self.canceller = self.canvas.after(delay, play)
-
-    def cancel(self):
-        if self.canceller is not None:
-            self.canvas.after_cancel(self.canceller)
-            self.canceller = None
+        self.gif = Gif(self.canvas, photoes, w, h, delay)
+        self.gif.play()
 
     def open(self, event=None):
         _ = event
@@ -92,6 +118,10 @@ class App(Frame):
         self.cancel()
         filename = self.webview_file_dialog()
         self.open_(filename, force_refresh=True)
+
+    def pause(self, event=None):
+        if self.gif is not None:
+            self.gif.pause()
 
     def webview_file_dialog(self):
         file = None
@@ -114,6 +144,7 @@ class App(Frame):
         return file
 
     def open_(self, filename=None, on_file_not_exists=None, force_refresh=False):
+        self.gif = None
         if filename is None:
             filename = self.cur
 
@@ -275,6 +306,8 @@ class App(Frame):
             self.reload(event)
         elif event.char == 'o':
             self.open(event)
+        elif event.char == 'p':
+            self.pause()
 
     def __init__(self, dir, master=None):
         Frame.__init__(self, master)
@@ -292,7 +325,7 @@ class App(Frame):
 
         self.dirname = ""
         self.dir_images = []
-        self.photoes = []
+        self.gif = None  # type: Gif
 
         from pathlib import Path
         home = Path.home()
