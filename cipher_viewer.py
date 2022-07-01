@@ -223,11 +223,13 @@ class App(Frame):
         self.open_(self.cur - 1, on_file_not_exists=lambda: self.prev())
 
     def on_click(self, event):
-        reserved = 47
+        reserved = 67
         if event.x < self.canvas.winfo_width() / 2 - reserved:
-            self.prev()
+            self.prev(event)
         elif event.x > self.canvas.winfo_width() / 2 + reserved:
-            self.next()
+            self.next(event)
+        else:
+            self.pause(event)
 
     def next(self, key_event=None):
         if self.dirname == "" or len(self.dir_images) == 0 or (len(self.dir_images) == 1 and self.cur == 0):
@@ -307,7 +309,7 @@ class App(Frame):
         elif event.char == 'o':
             self.open(event)
         elif event.char == 'p':
-            self.pause()
+            self.pause(event)
 
     def __init__(self, dir, master=None):
         Frame.__init__(self, master)
