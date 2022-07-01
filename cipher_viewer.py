@@ -1,8 +1,10 @@
 #!/usr/bin/env python
 
 import PIL.Image
+
 PIL.Image.MAX_IMAGE_PIXELS = 1058288540
 from PIL import ImageFile
+
 ImageFile.LOAD_TRUNCATED_IMAGES = True
 import os
 from send2trash import send2trash
@@ -40,18 +42,18 @@ class App(Frame):
         for frame in PIL.ImageSequence.Iterator(self.im):
             imgWidth, imgHeight = frame.size
             if imgWidth > w or imgHeight > h:
-                ratio = min(w/imgWidth, h/imgHeight)
+                ratio = min(w / imgWidth, h / imgHeight)
             else:
-                ratio = min(w/imgWidth, h/imgHeight, max_amplifier)
-            imgWidth = int(imgWidth*ratio)
-            imgHeight = int(imgHeight*ratio)
+                ratio = min(w / imgWidth, h / imgHeight, max_amplifier)
+            imgWidth = int(imgWidth * ratio)
+            imgHeight = int(imgHeight * ratio)
 
-            frame = frame.resize((imgWidth,imgHeight))
+            frame = frame.resize((imgWidth, imgHeight))
             if self.im.mode == "1":  # bitmap image
                 photo = PIL.ImageTk.BitmapImage(frame, foreground="white")
             elif self.im.mode == 'P':
                 photo = PIL.ImageTk.PhotoImage(frame.convert('RGBA'))
-            else:              # photo image
+            else:  # photo image
                 photo = PIL.ImageTk.PhotoImage(frame)
             self.photoes.append(photo)
 
@@ -59,7 +61,7 @@ class App(Frame):
             return
 
         print("totally %d frames" % len(self.photoes))
-        self.canvas.create_image(w/2, h/2, image=self.photoes[0])
+        self.canvas.create_image(w / 2, h / 2, image=self.photoes[0])
         if len(self.photoes) == 1:
             return
 
@@ -75,7 +77,7 @@ class App(Frame):
             nonlocal photo_index, photoes, delay
             # self.canvas.delete("all")
             photo_index = (photo_index + 1) % len(photoes)
-            self.canvas.create_image(w/2, h/2, image=photoes[photo_index])
+            self.canvas.create_image(w / 2, h / 2, image=photoes[photo_index])
             x_delay = delay
             if photo_index == len(photoes) - 1:
                 x_delay = 200
@@ -109,6 +111,7 @@ class App(Frame):
                 pass  # user exited file dialog without picking
             finally:
                 w.destroy()
+
         window = webview.create_window(self, hidden=True)
         webview.start(open_file_dialog, window)
         # file will either be a string or None
@@ -156,7 +159,7 @@ class App(Frame):
 
         try:
             if filename.endswith(".cipher"):
-                ret, jpgdata=decrypt_single_file(filename, self.D, self.N, memory_mode=True)
+                ret, jpgdata = decrypt_single_file(filename, self.D, self.N, memory_mode=True)
                 if ret != 0:
                     print("decrypt file '%s' failed with ret value %d" % (filename, ret))
                     return
@@ -171,38 +174,39 @@ class App(Frame):
                 on_file_not_exists()
             return
 
-        print("Opened file '%s'" %  basename)
+        print("Opened file '%s'" % basename)
         self.master.title(filename)
         self.invalidate()
-        self.num_page=0
-        self.num_page_tv.set(str(self.num_page+1))
+        self.num_page = 0
+        self.num_page_tv.set(str(self.num_page + 1))
         return
 
     @staticmethod
     def image_pred(fname):
         fname = fname.lower()
         if fname.endswith(".cipher"):
-            fname = fname[:len(fname)-len(".cipher")]
-        return fname.endswith(".jpg") or fname.endswith(".jpeg") or fname.endswith(".bmp") or fname.endswith('png') or fname.endswith(".webp") or fname.endswith(".gif")
+            fname = fname[:len(fname) - len(".cipher")]
+        return fname.endswith(".jpg") or fname.endswith(".jpeg") or fname.endswith(".bmp") or fname.endswith(
+            'png') or fname.endswith(".webp") or fname.endswith(".gif")
 
     def prev(self, key_event=None):
         if self.dirname == "" or len(self.dir_images) == 0 or (len(self.dir_images) == 1 and self.cur == 0):
             return
         self.cancel()
-        self.open_(self.cur-1, on_file_not_exists=lambda: self.prev())
+        self.open_(self.cur - 1, on_file_not_exists=lambda: self.prev())
 
     def on_click(self, event):
         reserved = 47
-        if event.x < self.canvas.winfo_width()/2-reserved:
+        if event.x < self.canvas.winfo_width() / 2 - reserved:
             self.prev()
-        elif event.x > self.canvas.winfo_width()/2+reserved:
+        elif event.x > self.canvas.winfo_width() / 2 + reserved:
             self.next()
 
     def next(self, key_event=None):
         if self.dirname == "" or len(self.dir_images) == 0 or (len(self.dir_images) == 1 and self.cur == 0):
             return
         self.cancel()
-        self.open_(self.cur+1)
+        self.open_(self.cur + 1)
 
     def reload(self, key_event=None):
         if self.dirname == "":
@@ -233,7 +237,7 @@ class App(Frame):
             removing_fname = os.path.join(self.dirname, filename)
             send2trash(removing_fname)
             print("Trashed file '%s'" % removing_fname)
-        
+
         self.open_()
 
     def switch_to_parent(self, key_event=None):
@@ -329,7 +333,7 @@ class App(Frame):
         fram.bind('<Control-o>', self.open)
 
         w, h = self.master.winfo_screenwidth(), self.master.winfo_screenheight()
-        self.canvas = Canvas(fram,width=w,height=h)
+        self.canvas = Canvas(fram, width=w, height=h)
         self.canvas.pack()
         self.canvas.configure(background='black')
         self.canvas.bind("<ButtonPress-1>", self.on_click)
@@ -345,7 +349,9 @@ class App(Frame):
 
 if __name__ == "__main__":
     import argparse
+
     parser = argparse.ArgumentParser(description='Parameters')
     parser.add_argument('dir', nargs='?', default='')
     args = parser.parse_args()
-    app = App(args.dir); app.mainloop()
+    app = App(args.dir)
+    app.mainloop()
