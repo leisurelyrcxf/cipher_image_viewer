@@ -213,8 +213,6 @@ class App(Frame):
         print("Opened file '%s'" % basename)
         self.master.title(filename)
         self.invalidate()
-        self.num_page = 0
-        self.num_page_tv.set(str(self.num_page + 1))
         return
 
     @staticmethod
@@ -339,6 +337,8 @@ class App(Frame):
         self.gif = None  # type: Gif
         self.photo = None
         self.width = 0
+        self.cur = 0
+        self.im = None
 
         from pathlib import Path
         home = Path.home()
@@ -347,21 +347,15 @@ class App(Frame):
             pic_dir = os.path.join(home, "Pictures")
             if os.path.isdir(pic_dir):
                 initial_dir = pic_dir
-            self.cur = 0
         else:
             if os.path.isdir(dir):
                 initial_dir = dir
-                self.cur = 0
             elif os.path.isfile(dir):
                 initial_dir = os.path.dirname(dir)
                 self.cur = dir
             else:
                 raise Exception("'%s' not exists" % dir)
         print("initial_dir: %s" % initial_dir)
-
-        self.im = None
-        self.num_page = 0
-        self.num_page_tv = StringVar()
 
         import config
         self.D, self.N = config.get_keys()
