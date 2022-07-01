@@ -78,6 +78,7 @@ class App(Frame):
         w, h = self.master.winfo_screenwidth(), self.master.winfo_screenheight()
         max_amplifier = 2
         photoes = []
+        self.width = 0
         for frame in PIL.ImageSequence.Iterator(self.im):
             img_width, img_height = frame.size
             if img_width > w or img_height > h:
@@ -86,6 +87,7 @@ class App(Frame):
                 ratio = min(w / img_width, h / img_height, max_amplifier)
             img_width = int(img_width * ratio)
             img_height = int(img_height * ratio)
+            self.width = img_width
 
             frame = frame.resize((img_width, img_height))
             if self.im.mode == "1":  # bitmap image
@@ -100,6 +102,7 @@ class App(Frame):
             return
 
         print("totally %d frames" % len(photoes))
+
         self.canvas.create_image(w / 2, h / 2, image=photoes[0])
         if len(photoes) == 1:
             return
@@ -146,6 +149,8 @@ class App(Frame):
 
     def open_(self, filename=None, on_file_not_exists=None, force_refresh=False):
         self.gif = None
+        self.width = 0
+
         if filename is None:
             filename = self.cur
 
@@ -225,9 +230,9 @@ class App(Frame):
 
     def on_click(self, event):
         reserved = 67
-        if event.x < self.canvas.winfo_width() / 2 - reserved:
+        if event.x < self.canvas.winfo_width() / 2 - self.width / 6:
             self.prev(event)
-        elif event.x > self.canvas.winfo_width() / 2 + reserved:
+        elif event.x > self.canvas.winfo_width() / 2 + self.width / 6:
             self.next(event)
         else:
             self.pause(event)
@@ -329,6 +334,7 @@ class App(Frame):
         self.dirname = ""
         self.dir_images = []
         self.gif = None  # type: Gif
+        self.width = 0
 
         from pathlib import Path
         home = Path.home()
