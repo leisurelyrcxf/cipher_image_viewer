@@ -79,6 +79,7 @@ class App(Frame):
             return
 
         w, h = self.master.winfo_screenwidth(), self.master.winfo_screenheight()
+        w, h = int(w*0.9), int(h*0.9)
         max_amplifier = 2
         photoes = []
         self.width = 0
@@ -88,11 +89,13 @@ class App(Frame):
                 ratio = min(w / img_width, h / img_height)
             else:
                 ratio = min(w / img_width, h / img_height, max_amplifier)
+            ori_img_width, ori_img_height = img_width, img_height
             img_width = int(img_width * ratio)
             img_height = int(img_height * ratio)
             self.width = img_width
 
             frame = frame.resize((img_width, img_height))
+            print("resize to (%d, %d) from (%d, %d), screen_size: (%d, %d)" % (img_width, img_height, ori_img_width, ori_img_height, w, h))
             if self.im.mode == "1":  # bitmap image
                 photo = PIL.ImageTk.BitmapImage(frame, foreground="white")
             elif self.im.mode == 'P':
@@ -352,6 +355,8 @@ class App(Frame):
                 initial_dir = dir
             elif os.path.isfile(dir):
                 initial_dir = os.path.dirname(dir)
+                if initial_dir == "":
+                    initial_dir = "."
                 self.cur = dir
             else:
                 raise Exception("'%s' not exists" % dir)
