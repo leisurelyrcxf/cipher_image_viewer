@@ -9,6 +9,7 @@ ImageFile.LOAD_TRUNCATED_IMAGES = True
 import os
 from send2trash import send2trash
 from pathlib import Path
+import shutil
 
 try:
     from Tkinter import *
@@ -274,7 +275,11 @@ class App(Frame):
         del self.dir_images[self.cur]
         if not keep_file:
             removing_fname = os.path.join(self.dirname, filename)
-            send2trash(removing_fname)
+
+            if self.trash_dir == '':
+                send2trash(removing_fname)
+            else:
+                shutil.move(removing_fname, self.trash_dir)
             print("Trashed file '%s'" % removing_fname)
 
         self.open_()
@@ -321,7 +326,7 @@ class App(Frame):
         elif event.char == 'p':
             self.pause(event)
 
-    def __init__(self, dir, master=None):
+    def __init__(self, dir, trash_dir, master=None):
         Frame.__init__(self, master)
         self.master.title('Image Viewer')
         try:
@@ -342,6 +347,9 @@ class App(Frame):
         self.width = 0
         self.cur = 0
         self.im = None
+        self.trash_dir = trash_dir  # type: str
+        if self.trash_dir != '':
+            os.makedirs(self.trash_dir, exist_ok=True)
 
         from pathlib import Path
         home = Path.home()
@@ -394,6 +402,7 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description='Parameters')
     parser.add_argument('dir', nargs='?', default='')
+    parser.add_argument("--trash", dest="trash", default="", help="trash dir")
     args = parser.parse_args()
-    app = App(args.dir)
+    app = App(args.dir, args.trash)
     app.mainloop()
