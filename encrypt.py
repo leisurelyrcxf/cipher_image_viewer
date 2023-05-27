@@ -5,6 +5,9 @@ import math
 import traceback
 import re
 import sys
+
+from send2trash import send2trash
+
 from hash_func import md5
 from reverse import reverse, reverse_back
 
@@ -118,7 +121,7 @@ def encrypt_single_file(path, E, N, do_reverse=False):
     enwr.close()
     size = float(r.tell())
     r.close()
-    os.remove(path)
+    send2trash(path)
     endTimeStamp = time.perf_counter()
     print(
         "The file \"" + path + "\" has been encrypted successfully! Process totally %6.2f kb's document, cost %f seconds.\n" % (
