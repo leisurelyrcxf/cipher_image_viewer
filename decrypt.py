@@ -3,6 +3,9 @@ import time
 import sys
 import traceback
 import re
+
+from send2trash import send2trash
+
 from reverse import reverse_back, reverse_func
 from hash_func import md5
 from io import BytesIO
@@ -38,9 +41,9 @@ def decrypt(dire, D, N, debug=False):
 
 def decrypt_single_file(filename, D, N, debug=False, memory_mode=False):
     print("D: %d, N: %d" % (D, N))
-    decrypt_writer, flag = None, 0
+    decrypt_writer, decrypted_file_already_exists = None, 0
     try:
-        flag = 0
+        decrypted_file_already_exists = 0
         print("Processing now: \"" + filename + "\"")
         startTimeStamp = time.perf_counter()
         src_rd = open(filename, 'rb')  # r stands for the file that is gonna be cyphered
@@ -78,13 +81,13 @@ def decrypt_single_file(filename, D, N, debug=False, memory_mode=False):
                 src_rd.read(src_byte_read)
                 decrypt_writer.write(line)
             r0.close()
-            flag = 1
+            decrypted_file_already_exists = 1
         elif not memory_mode:
             decrypt_writer = open(decrypted_fname, 'wb')
-            flag = 0
+            decrypted_file_already_exists = 0
         else:
             decrypt_writer = BytesIO()
-            flag = 0
+            decrypted_file_already_exists = 0
 
         while True:
             SpeedTimeS = time.perf_counter()
@@ -148,8 +151,8 @@ def decrypt_single_file(filename, D, N, debug=False, memory_mode=False):
         assert (src_rd.tell() == size)
         src_rd.close()
 
-        if flag:
-            os.remove(decrypted_fname)
+        if decrypted_file_already_exists:
+            send2trash(decrypted_fname)
             if decrypted_tmp_fname != "":
                 os.rename(decrypted_tmp_fname, decrypted_fname)
 
@@ -171,20 +174,20 @@ def decrypt_single_file(filename, D, N, debug=False, memory_mode=False):
             orig_chksum = md5(orig_fname)
             if orig_chksum == chksum:
                 print("\nChecksum OK, removing cipher file %s" % filename)
-                os.remove(filename)
+                send2trash(filename)
             else:
                 print("Checksum Mismatch:")
                 print("MD5(%s): %s" % (orig_fname, orig_chksum))
                 print("Expect: %s" % chksum)
                 if not debug:
                     print("Deleting corrupted file '%s'" % (orig_fname))
-                    os.remove(orig_fname)
+                    send2trash(orig_fname)
                 else:
                     print("Renaming corrupted file '%s' to '%s'" % (orig_fname, orig_fname + ".dbg"))
                     os.rename(orig_fname, orig_fname + ".dbg")
                 return -1, None
         else:
-            os.remove(filename)
+            send2trash(filename)
         endTimeStamp = time.perf_counter()
         print(
             "The file \"" + filename + "\" has been decrypted successfully. Process totally %6.2f kb's document, cost %f seconds.\n" % (
@@ -198,8 +201,8 @@ def decrypt_single_file(filename, D, N, debug=False, memory_mode=False):
         print("Unlocked src_fd")
         src_rd.close()
 
-        if flag:
-            os.remove(decrypted_fname)
+        if decrypted_file_already_exists:
+            send2trash(decrypted_fname)
             time.sleep(1)
             os.rename(decrypted_tmp_fname, decrypted_fname)
         return -1, None

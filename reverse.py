@@ -3,6 +3,8 @@ import os
 import sys
 from io import BytesIO
 
+from send2trash import send2trash
+
 block_size = 100 * 1024 * 1024  # 100Mb
 
 
@@ -28,7 +30,7 @@ def _reverse(src, dst):
     size = os.path.getsize(src)
     reverse_func(size, r, dst_opener=lambda mode: open(dst, mode))
     r.close()
-    os.remove(src)
+    send2trash(src)
 
 
 def reverse_func(size, reader, dst_opener=None, memory_output=False):
