@@ -5,6 +5,7 @@ import math
 import traceback
 import re
 import sys
+import shutil
 
 from send2trash import send2trash
 
@@ -12,17 +13,17 @@ from hash_func import md5
 from reverse import reverse, reverse_back
 
 
-def encrypt(dir, E, N, do_reverse=False):
+def encrypt(dir, E, N, do_reverse=False, trash_dir=''):
     if os.path.isdir(dir):
         x = input(
             "Do you really want to encrypt all the subdirectories of '%s', press y to continue...\n" % os.path.abspath(
                 dir))
         if x != 'y' and x != 'Y':
             exit(1)
-    encrypt_(dir, E, N, do_reverse)
+    encrypt_(dir, E, N, do_reverse, trash_dir)
 
 
-def encrypt_(dir, E, N, do_reverse=False):
+def encrypt_(dir, E, N, do_reverse=False, trash_dir=''):
     try:
         if os.path.isdir(dir):
             files = os.listdir(dir)
@@ -31,16 +32,16 @@ def encrypt_(dir, E, N, do_reverse=False):
                     pass
                 else:
                     dir += '/'
-                encrypt_(dir + f, E, N, do_reverse)
+                encrypt_(dir + f, E, N, do_reverse, trash_dir)
         elif os.path.isfile(dir):
             if os.path.splitext(dir)[1] == ".py" or os.path.splitext(dir)[1] == ".pyc" or os.path.splitext(dir)[
                 1] == ".tmp" or os.path.splitext(dir)[1] == ".cipher" or os.path.splitext(dir)[1] == ".chksum":
                 return
             elif os.path.splitext(dir)[1] == ".reverse":
                 dir = reverse_back(dir)
-                encrypt_single_file(dir, E, N, do_reverse)
+                encrypt_single_file(dir, E, N, do_reverse, trash_dir)
             else:
-                encrypt_single_file(dir, E, N, do_reverse)
+                encrypt_single_file(dir, E, N, do_reverse, trash_dir)
         else:
             print("directory or file '%s' does not exist" % dir)
     except:
@@ -48,7 +49,7 @@ def encrypt_(dir, E, N, do_reverse=False):
         exit()
 
 
-def encrypt_single_file(path, E, N, do_reverse=False):
+def encrypt_single_file(path, E, N, do_reverse=False, trash_dir=''):
     print("E: %d, N: %d" % (E, N))
     byte_read = 1 * 1024 * 1024  # 1MB
 
@@ -121,7 +122,10 @@ def encrypt_single_file(path, E, N, do_reverse=False):
     enwr.close()
     size = float(r.tell())
     r.close()
-    send2trash(path)
+    if trash_dir == '':
+        send2trash(path)
+    else:
+        shutil.move(path, trash_dir)
     endTimeStamp = time.perf_counter()
     print(
         "The file \"" + path + "\" has been encrypted successfully! Process totally %6.2f kb's document, cost %f seconds.\n" % (
@@ -135,6 +139,7 @@ if __name__ == "__main__":
     parser.add_argument('-e', type=int, dest='E', help='E', default=53)
     parser.add_argument('-n', type=int, dest='N', help='N', default=61823)
     parser.add_argument('--reverse', action='store_true', dest='reverse', help='reverse blocks')
+    parser.add_argument("--trash", dest="trash_dir", default="", help="trash dir, default to empty which use the system trash")
     parser.add_argument('dir', nargs='?', default='')
     args = parser.parse_args()
     if args.dir == "":
@@ -147,4 +152,4 @@ if __name__ == "__main__":
     if args.N < 32 * 256:
         print("N must be not less than 32*256")
         exit(1)
-    encrypt(args.dir.strip(), args.E, args.N, args.reverse)
+    encrypt(args.dir.strip(), args.E, args.N, args.reverse, args.trash_dir)

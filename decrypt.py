@@ -3,6 +3,7 @@ import time
 import sys
 import traceback
 import re
+import shutil
 
 from send2trash import send2trash
 
@@ -12,21 +13,21 @@ from io import BytesIO
 import portalocker
 
 
-def decrypt(dire, D, N, debug=False):
+def decrypt(dire, D, N, debug=False, trash_dir=''):
     try:
         if os.path.isdir(dire):
             if dire[-1] != '/':
                 dire += '/'
             files = os.listdir(dire)
             for f in files:
-                ret = decrypt(dire + f, D, N, debug)
+                ret = decrypt(dire + f, D, N, debug, trash_dir)
                 if ret != 0:
                     return ret
             return 0
 
         if os.path.isfile(dire):
             if re.search('^.*?\.cipher$', dire):
-                ret, _ = decrypt_single_file(dire, D, N, debug)
+                ret, _ = decrypt_single_file(dire, D, N, debug, trash_dir=trash_dir)
                 return ret
             print("ignore non-cipher file %s" % dire)
             return 0
@@ -39,7 +40,7 @@ def decrypt(dire, D, N, debug=False):
         return -1
 
 
-def decrypt_single_file(filename, D, N, debug=False, memory_mode=False):
+def decrypt_single_file(filename, D, N, debug=False, memory_mode=False, trash_dir=''):
     print("D: %d, N: %d" % (D, N))
     decrypt_writer, decrypted_file_already_exists = None, 0
     try:
@@ -61,6 +62,7 @@ def decrypt_single_file(filename, D, N, debug=False, memory_mode=False):
 
         index = filename.rfind('.')
         decrypted_fname = filename[:index]  # get the name of the partly decrypted file
+        print("decrypted_fname: ", decrypted_fname)
 
         r0_byte_read = 1024 * 1024  # 1MB
         src_byte_read = r0_byte_read
@@ -152,7 +154,7 @@ def decrypt_single_file(filename, D, N, debug=False, memory_mode=False):
         src_rd.close()
 
         if decrypted_file_already_exists:
-            send2trash(decrypted_fname)
+            trash(decrypted_fname, trash_dir)
             if decrypted_tmp_fname != "":
                 os.rename(decrypted_tmp_fname, decrypted_fname)
 
@@ -174,20 +176,21 @@ def decrypt_single_file(filename, D, N, debug=False, memory_mode=False):
             orig_chksum = md5(orig_fname)
             if orig_chksum == chksum:
                 print("\nChecksum OK, removing cipher file %s" % filename)
-                send2trash(filename)
+                # trash(filename, trash_dir)
             else:
                 print("Checksum Mismatch:")
                 print("MD5(%s): %s" % (orig_fname, orig_chksum))
                 print("Expect: %s" % chksum)
                 if not debug:
                     print("Deleting corrupted file '%s'" % (orig_fname))
-                    send2trash(orig_fname)
+                    trash(orig_fname, trash_dir)
                 else:
                     print("Renaming corrupted file '%s' to '%s'" % (orig_fname, orig_fname + ".dbg"))
                     os.rename(orig_fname, orig_fname + ".dbg")
                 return -1, None
         else:
-            send2trash(filename)
+            pass
+            # trash(filename, trash_dir)
         endTimeStamp = time.perf_counter()
         print(
             "The file \"" + filename + "\" has been decrypted successfully. Process totally %6.2f kb's document, cost %f seconds.\n" % (
@@ -202,10 +205,17 @@ def decrypt_single_file(filename, D, N, debug=False, memory_mode=False):
         src_rd.close()
 
         if decrypted_file_already_exists:
-            send2trash(decrypted_fname)
+            trash(decrypted_fname, trash_dir)
             time.sleep(1)
             os.rename(decrypted_tmp_fname, decrypted_fname)
         return -1, None
+
+
+def trash(path, trash_dir):
+    if trash_dir == '':
+        send2trash(path)
+    else:
+        shutil.move(path, trash_dir)
 
 
 def guess(filename, num):
@@ -247,6 +257,7 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(description='Parameters')
     parser.add_argument('dir', nargs='?', default='')
+    parser.add_argument("--trash", dest="trash_dir", default="", help="trash dir")
     parser.add_argument('--debug', action='store_true', dest='debug', help='debug mode, will keep error files')
     args = parser.parse_args()
     if args.dir == "":
@@ -257,4 +268,4 @@ if __name__ == '__main__':
     import config
 
     D, N = config.get_keys()
-    decrypt(args.dir, D, N, args.debug)
+    decrypt(args.dir, D, N, args.debug, args.trash_dir)
