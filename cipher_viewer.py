@@ -22,6 +22,9 @@ from io import BytesIO
 import webview
 from decrypt import decrypt_single_file
 
+# 全局变量，用于追踪是否处于全屏状态
+fullscreen = True
+
 
 class Gif:
     def __init__(self, canvas, photoes, w, h, delay):
@@ -80,7 +83,8 @@ class App(Frame):
             return
 
         w, h = self.master.winfo_screenwidth(), self.master.winfo_screenheight()
-        w, h = int(w*0.9), int(h*0.9)
+        # w, h = self.canvas.winfo_width(), self.canvas.winfo_height()
+        # w, h = int(w*0.9), int(h*0.9)
         max_amplifier = 2
         photoes = []
         self.width = 0
@@ -112,7 +116,7 @@ class App(Frame):
 
         if len(photoes) == 1:
             self.photo = photoes[0]
-            self.canvas.create_image(w / 2, h / 2, image=self.photo)
+            self.canvas.create_image(w / 2, h / 2, anchor="center", image=self.photo)
             return
 
         try:
@@ -384,7 +388,8 @@ class App(Frame):
 
         w, h = self.master.winfo_screenwidth(), self.master.winfo_screenheight()
         self.canvas = Canvas(fram, width=w, height=h)
-        self.canvas.pack()
+        #self.canvas.pack()
+        self.canvas.pack(expand=True, fill="both")
         self.canvas.configure(background='black')
         self.canvas.bind("<ButtonPress-1>", self.on_click)
 
@@ -397,12 +402,49 @@ class App(Frame):
         self.open_()
 
 
+def toggle_fullscreen(event=None):
+    global fullscreen
+    # 切换全屏状态
+    fullscreen = not fullscreen
+    root.attributes("-fullscreen", fullscreen)
+
+def exit_fullscreen(event=None):
+    global fullscreen
+    fullscreen = False
+    root.attributes("-fullscreen", False)
+
 if __name__ == "__main__":
+    import signal
     import argparse
+
+    def sigint_handler(signum, frame):
+        print("检测到 ctrl + c，退出程序……")
+        root.destroy()  # 或者使用 sys.exit(0)
+
+    # 设置 SIGINT 的信号处理器
+    signal.signal(signal.SIGINT, sigint_handler)
+
 
     parser = argparse.ArgumentParser(description='Parameters')
     parser.add_argument('dir', nargs='?', default='')
     parser.add_argument("--trash", dest="trash", default="", help="trash dir")
+    parser.add_argument("--fullscreen", dest="fullscreen", type=bool, default=True, help="full screen")
     args = parser.parse_args()
-    app = App(args.dir, args.trash)
-    app.mainloop()
+
+    fullscreen = args.fullscreen
+
+    root = Tk()
+    root.attributes("-fullscreen", args.fullscreen)  # 设置全屏模式
+    root.bind("<F11>", toggle_fullscreen)
+    root.bind("~", toggle_fullscreen)
+    root.bind("<KeyPress-grave>", toggle_fullscreen)
+    root.bind("<Escape>", exit_fullscreen)
+    app = App(args.dir, args.trash, master=root)
+
+    root.lift()                  # 将窗口提升到最前面
+    root.attributes("-topmost", True)   # 设置为顶层窗口
+    root.after(100, lambda: root.attributes("-topmost", False))  # 100ms 后取消置顶
+
+    root.focus_force()           # 强制获取焦点
+
+    root.mainloop()
