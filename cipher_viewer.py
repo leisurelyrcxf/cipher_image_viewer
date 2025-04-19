@@ -447,10 +447,9 @@ if __name__ == "__main__":
         def maximize():
             w, h = root.winfo_screenwidth(), root.winfo_screenheight()
             root.geometry(f"{w}x{h}")
-            root.update_idletasks()
-            app.invalidate()
+            root.after(30, lambda: app.invalidate())
 
-        root.after(30, maximize) 
+        root.after_idle(maximize)
 
     def toggle_fullscreen(event=None):
         global fullscreen
