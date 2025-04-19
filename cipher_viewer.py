@@ -82,8 +82,15 @@ class App(Frame):
         if self.im is None:
             return
 
-        w, h = self.master.winfo_screenwidth(), self.master.winfo_screenheight()
-        # w, h = self.canvas.winfo_width(), self.canvas.winfo_height()
+
+        self.canvas.update_idletasks()
+        global fullscreen
+        if fullscreen:
+            w, h = self.master.winfo_screenwidth(), self.master.winfo_screenheight()
+        else:
+            w, h = self.canvas.winfo_width(), self.canvas.winfo_height()
+        print(f"全屏模式: {fullscreen}, 当前窗口可用区域: {w}×{h}")
+
         # w, h = int(w*0.9), int(h*0.9)
         max_amplifier = 2
         photoes = []
@@ -111,13 +118,14 @@ class App(Frame):
 
         if len(photoes) == 0:
             return
-
-        print("totally %d frames" % len(photoes))
+        
 
         if len(photoes) == 1:
             self.photo = photoes[0]
             self.canvas.create_image(w / 2, h / 2, anchor="center", image=self.photo)
             return
+
+        print("Total %d frames" % len(photoes))
 
         try:
             delay = self.im.info['duration']
@@ -402,16 +410,6 @@ class App(Frame):
         self.open_()
 
 
-def toggle_fullscreen(event=None):
-    global fullscreen
-    # 切换全屏状态
-    fullscreen = not fullscreen
-    root.attributes("-fullscreen", fullscreen)
-
-def exit_fullscreen(event=None):
-    global fullscreen
-    fullscreen = False
-    root.attributes("-fullscreen", False)
 
 if __name__ == "__main__":
     import signal
@@ -435,16 +433,44 @@ if __name__ == "__main__":
 
     root = Tk()
     root.attributes("-fullscreen", args.fullscreen)  # 设置全屏模式
-    root.bind("<F11>", toggle_fullscreen)
-    root.bind("~", toggle_fullscreen)
-    root.bind("<KeyPress-grave>", toggle_fullscreen)
-    root.bind("<Escape>", exit_fullscreen)
+
     app = App(args.dir, args.trash, master=root)
+
+
+    def exit_fullscreen(event=None):
+        global fullscreen
+        fullscreen = False
+
+        root.attributes("-fullscreen", False)
+        root.overrideredirect(False)
+
+        def maximize():
+            w, h = root.winfo_screenwidth(), root.winfo_screenheight()
+            root.geometry(f"{w}x{h}")
+            root.update_idletasks()
+            app.invalidate()
+
+        root.after(30, maximize) 
+
+    def toggle_fullscreen(event=None):
+        global fullscreen
+        if fullscreen:
+            exit_fullscreen()
+        else:
+            root.attributes("-fullscreen", True)
+            fullscreen = True
+            app.invalidate()
+
+
+    root.bind("<KeyPress-grave>", toggle_fullscreen)
+    root.bind("<F11>", toggle_fullscreen)
+    root.bind("<Escape>", exit_fullscreen)
 
     root.lift()                  # 将窗口提升到最前面
     root.attributes("-topmost", True)   # 设置为顶层窗口
     root.after(100, lambda: root.attributes("-topmost", False))  # 100ms 后取消置顶
 
     root.focus_force()           # 强制获取焦点
+    
 
     root.mainloop()
