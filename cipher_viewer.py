@@ -472,5 +472,11 @@ if __name__ == "__main__":
 
     root.focus_force()           # 强制获取焦点
     
+    def _heartbeat():
+        # 仅仅为了让 Tk 的 select() 超时，回到 Python，去分发信号
+        root.after(100, _heartbeat)
+
+    _heartbeat()
+
 
     root.mainloop()
