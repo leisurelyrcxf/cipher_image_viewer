@@ -26,7 +26,7 @@ def decrypt(dire, D, N, debug=False, trash_dir=''):
             return 0
 
         if os.path.isfile(dire):
-            if re.search('^.*?\.cipher$', dire):
+            if re.search('^.*?\\.cipher$', dire):
                 ret, _ = decrypt_single_file(dire, D, N, debug, trash_dir=trash_dir)
                 return ret
             print("ignore non-cipher file %s" % dire)
