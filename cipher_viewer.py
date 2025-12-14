@@ -74,6 +74,12 @@ class App(Frame):
         if self.gif is not None:
             self.gif.cancel()
             self.gif = None
+    
+    def cancel_slideshow(self):
+        """取消幻灯片模式的定时器"""
+        if self.slideshow_timer is not None:
+            self.canvas.after_cancel(self.slideshow_timer)
+            self.slideshow_timer = None
 
     def invalidate(self):
         self.cancel()
@@ -139,12 +145,51 @@ class App(Frame):
         _ = event
 
         self.cancel()
+        self.cancel_slideshow()  # 手动打开文件时取消幻灯片定时器
         filename = self.webview_file_dialog()
         self.open_(filename, force_refresh=True)
+        if self.slideshow_mode:
+            self.start_slideshow()  # 如果处于幻灯片模式，重新启动定时器
 
     def pause(self, event=None):
         if self.gif is not None:
             self.gif.pause()
+    
+    def toggle_slideshow(self, event=None):
+        """切换幻灯片模式"""
+        self.slideshow_mode = not self.slideshow_mode
+        
+        if self.slideshow_mode:
+            print(f"幻灯片模式：开启（间隔 {self.slideshow_interval/1000:.1f} 秒）")
+            self.start_slideshow()
+        else:
+            print("幻灯片模式：关闭")
+            self.cancel_slideshow()
+    
+    def start_slideshow(self):
+        """启动幻灯片自动播放"""
+        if not self.slideshow_mode:
+            return
+        
+        self.cancel_slideshow()
+        self.slideshow_timer = self.canvas.after(self.slideshow_interval, self.slideshow_next)
+    
+    def slideshow_next(self):
+        """幻灯片模式下自动切换到下一张"""
+        if not self.slideshow_mode:
+            return
+        
+        # 如果是 GIF，先取消其播放
+        if self.gif is not None:
+            self.cancel()
+        
+        # 切换到下一张
+        if self.dirname != "" and len(self.dir_images) > 0:
+            self.open_(self.cur + 1)
+        
+        # 继续下一次自动播放
+        if self.slideshow_mode:
+            self.slideshow_timer = self.canvas.after(self.slideshow_interval, self.slideshow_next)
 
     def webview_file_dialog(self):
         file = None
@@ -243,7 +288,10 @@ class App(Frame):
         if self.dirname == "" or len(self.dir_images) == 0 or (len(self.dir_images) == 1 and self.cur == 0):
             return
         self.cancel()
+        self.cancel_slideshow()  # 手动切换时取消幻灯片定时器
         self.open_(self.cur - 1, on_file_not_exists=lambda: self.prev())
+        if self.slideshow_mode:
+            self.start_slideshow()  # 如果处于幻灯片模式，重新启动定时器
 
     def on_click(self, event):
         reserved = 67
@@ -258,7 +306,10 @@ class App(Frame):
         if self.dirname == "" or len(self.dir_images) == 0 or (len(self.dir_images) == 1 and self.cur == 0):
             return
         self.cancel()
+        self.cancel_slideshow()  # 手动切换时取消幻灯片定时器
         self.open_(self.cur + 1)
+        if self.slideshow_mode:
+            self.start_slideshow()  # 如果处于幻灯片模式，重新启动定时器
 
     def reload(self, key_event=None):
         if self.dirname == "":
@@ -268,6 +319,7 @@ class App(Frame):
         if 0 <= self.cur < len(self.dir_images):
             cur_fname = self.dir_images[self.cur]
 
+        self.cancel_slideshow()  # 重新加载时取消幻灯片定时器
         self.chdir(self.dirname)
         self.cur = 0
         if cur_fname != '':
@@ -276,9 +328,12 @@ class App(Frame):
             except ValueError:
                 pass
         self.open_()
+        if self.slideshow_mode:
+            self.start_slideshow()  # 如果处于幻灯片模式，重新启动定时器
 
     def delete(self, key_event=None, keep_file=False):
         self.cancel()
+        self.cancel_slideshow()  # 删除文件时取消幻灯片定时器
 
         if self.cur < 0 or self.cur >= len(self.dir_images):
             return
@@ -295,9 +350,12 @@ class App(Frame):
             print("Trashed file '%s'" % removing_fname)
 
         self.open_()
+        if self.slideshow_mode:
+            self.start_slideshow()  # 如果处于幻灯片模式，重新启动定时器
 
     def switch_to_parent(self, key_event=None):
         self.cancel()
+        self.cancel_slideshow()  # 切换到父目录时取消幻灯片定时器
 
         if self.dirname == "":
             return
@@ -309,6 +367,8 @@ class App(Frame):
         self.chdir(p)
         self.cur = 0
         self.open_()
+        if self.slideshow_mode:
+            self.start_slideshow()  # 如果处于幻灯片模式，重新启动定时器
 
     def chdir(self, dirname):
         self.dirname = os.path.abspath(dirname)
@@ -337,8 +397,10 @@ class App(Frame):
             self.open(event)
         elif event.char == 'p':
             self.pause(event)
+        elif event.char == 's':
+            self.toggle_slideshow(event)
 
-    def __init__(self, dir, trash_dir, master=None):
+    def __init__(self, dir, trash_dir, slideshow_interval=8000, master=None):
         Frame.__init__(self, master)
         self.master.title('Image Viewer')
         try:
@@ -360,6 +422,9 @@ class App(Frame):
         self.cur = 0
         self.im = None
         self.trash_dir = trash_dir  # type: str
+        self.slideshow_mode = False  # 幻灯片模式标志
+        self.slideshow_timer = None  # 幻灯片定时器
+        self.slideshow_interval = slideshow_interval  # 幻灯片间隔时间（毫秒）
         if self.trash_dir != '':
             os.makedirs(self.trash_dir, exist_ok=True)
 
@@ -422,14 +487,19 @@ if __name__ == "__main__":
     parser.add_argument('dir', nargs='?', default='')
     parser.add_argument("--trash", dest="trash", default="", help="trash dir")
     parser.add_argument("--fullscreen", dest="fullscreen", type=bool, default=True, help="full screen")
+    parser.add_argument("--slideshow-interval", dest="slideshow_interval", type=float, default=8.0, 
+                        help="slideshow interval in seconds (default: 8.0)")
     args = parser.parse_args()
 
     fullscreen = args.fullscreen
+    
+    # 将秒转换为毫秒
+    slideshow_interval_ms = int(args.slideshow_interval * 1000)
 
     root = Tk()
     root.attributes("-fullscreen", args.fullscreen)  # 设置全屏模式
 
-    app = App(args.dir, args.trash, master=root)
+    app = App(args.dir, args.trash, slideshow_interval=slideshow_interval_ms, master=root)
 
 
     def exit_fullscreen(event=None):
