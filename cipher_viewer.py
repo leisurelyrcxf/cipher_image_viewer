@@ -389,11 +389,6 @@ class App(Frame):
         fram = Frame(self)
         fram.pack(side=TOP, fill=BOTH)
 
-        fram.bind("<Key>", self.key_handler)
-        fram.bind('<Left>', self.prev)
-        fram.bind('<Right>', self.next)
-        fram.bind('<Control-o>', self.open)
-
         w, h = self.master.winfo_screenwidth(), self.master.winfo_screenheight()
         self.canvas = Canvas(fram, width=w, height=h)
         #self.canvas.pack()
@@ -464,6 +459,12 @@ if __name__ == "__main__":
     root.bind("<KeyPress-grave>", toggle_fullscreen)
     root.bind("<F11>", toggle_fullscreen)
     root.bind("<Escape>", exit_fullscreen)
+    
+    # 将 app 的快捷键也绑定到 root 上，这样无论焦点在哪里都能工作
+    root.bind("<Key>", app.key_handler)
+    root.bind('<Left>', app.prev)
+    root.bind('<Right>', app.next)
+    root.bind('<Control-o>', app.open)
 
     root.lift()                  # 将窗口提升到最前面
     root.attributes("-topmost", True)   # 设置为顶层窗口
