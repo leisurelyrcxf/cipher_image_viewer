@@ -2,3 +2,5 @@
 *.swp
 .idea/*
 default_decode_key
+build/*
+dist/*
