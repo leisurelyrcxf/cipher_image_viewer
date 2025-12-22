@@ -262,7 +262,7 @@ if __name__ == '__main__':
     if args.dir == "":
         print("must provide dir/file name")
         parser.print_help()
-        exit(1)
+        sys.exit(1)
 
     import config
 

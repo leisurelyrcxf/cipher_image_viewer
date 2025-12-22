@@ -446,13 +446,16 @@ def is_prime(n):
 def generate_keys(p, q):
     if not is_prime(p):
         print("%d is not a prime" % p)
-        exit(1)
+        import sys
+        sys.exit(1)
     if not is_prime(q):
         print("%d is not a prime" % q)
-        exit(1)
+        import sys
+        sys.exit(1)
     if not 32 * 256 < p * q < 256 * 256 * 256:
         print("not 32*256 < p*q < 256*256*256, p: %d, q: %d" % (p, q))
-        exit(1)
+        import sys
+        sys.exit(1)
 
     N = p * q
     r = (p - 1) * (q - 1)
@@ -470,7 +473,8 @@ def generate_keys(p, q):
             break
     if e * d % r != 1:
         print("fatal error, can't find d for (e(%d), r(%d)) % (e, r)")
-        exit(1)
+        import sys
+        sys.exit(1)
     return e, d
 
 

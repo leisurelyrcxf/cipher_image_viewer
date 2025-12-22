@@ -20,7 +20,7 @@ def encrypt(dir, E, N, do_reverse=False, trash_dir=''):
             "Do you really want to encrypt all the subdirectories of '%s', press y to continue...\n" % os.path.abspath(
                 dir))
         if x != 'y' and x != 'Y':
-            exit(1)
+            sys.exit(1)
     encrypt_(dir, E, N, do_reverse, trash_dir)
 
 
@@ -47,7 +47,7 @@ def encrypt_(dir, E, N, do_reverse=False, trash_dir=''):
             print("directory or file '%s' does not exist" % dir)
     except:
         print(traceback.format_exc())
-        exit()
+        sys.exit(1)
 
 
 def encrypt_single_file(path, E, N, do_reverse=False, trash_dir=''):
@@ -63,7 +63,7 @@ def encrypt_single_file(path, E, N, do_reverse=False, trash_dir=''):
     if os.path.isfile(encrypted_fname):
         x = input("overwritting existed file '%s', press y to continue...\n" % encrypted_fname)
         if x != 'y' and x != 'Y':
-            exit(1)
+            sys.exit(1)
 
     enwr = open(encrypted_fname, 'wb')
     enwr.write(bytes("cchheecckkssuumm", encoding='utf8'))
@@ -143,11 +143,11 @@ if __name__ == "__main__":
     if args.dir == "":
         print("must provide dir/file name")
         parser.print_help()
-        exit(1)
+        sys.exit(1)
     if args.N > 256 ** 3:
         print("N must be not greater than 256*256*256")
-        exit(1)
+        sys.exit(1)
     if args.N < 32 * 256:
         print("N must be not less than 32*256")
-        exit(1)
+        sys.exit(1)
     encrypt(args.dir.strip(), args.E, args.N, args.reverse, args.trash_dir)
