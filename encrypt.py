@@ -11,6 +11,7 @@ from send2trash import send2trash
 
 from hash_func import md5
 from reverse import reverse, reverse_back
+from file_utils import safe_move_to_trash
 
 
 def encrypt(dir, E, N, do_reverse=False, trash_dir=''):
@@ -122,10 +123,7 @@ def encrypt_single_file(path, E, N, do_reverse=False, trash_dir=''):
     enwr.close()
     size = float(r.tell())
     r.close()
-    if trash_dir == '':
-        send2trash(path)
-    else:
-        shutil.move(path, trash_dir)
+    safe_move_to_trash(path, trash_dir)
     endTimeStamp = time.perf_counter()
     print(
         "The file \"" + path + "\" has been encrypted successfully! Process totally %6.2f kb's document, cost %f seconds.\n" % (

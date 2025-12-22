@@ -11,6 +11,7 @@ from reverse import reverse_back, reverse_func
 from hash_func import md5
 from io import BytesIO
 import portalocker
+from file_utils import safe_move_to_trash
 
 
 def decrypt(dire, D, N, debug=False, trash_dir=''):
@@ -212,10 +213,8 @@ def decrypt_single_file(filename, D, N, debug=False, memory_mode=False, trash_di
 
 
 def trash(path, trash_dir):
-    if trash_dir == '':
-        send2trash(path)
-    else:
-        shutil.move(path, trash_dir)
+    """将文件移动到 trash 目录（使用公共函数）"""
+    safe_move_to_trash(path, trash_dir)
 
 
 def guess(filename, num):
